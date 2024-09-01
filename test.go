@@ -291,18 +291,6 @@ func main() {
 	w.ShowAndRun()
 }
 
-// func createTagWindow(a fyne.App, parent fyne.Window) {
-// 	tagWindow := a.NewWindow("Create Tag")
-
-// 	content := container.NewVBox(
-// 		widget.NewLabel("Test window:"),
-// 	)
-
-// 	tagWindow.SetContent(content)
-// 	tagWindow.Resize(fyne.NewSize(300, 200))
-// 	tagWindow.Show()
-// }
-
 func showTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int) {
 	tagWindow := a.NewWindow("Add a Tag")
 
@@ -342,15 +330,13 @@ func showTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int) {
 			tagID := id // Create a new variable to avoid closure issues
 			button.OnTapped = func() {
 				go func() {
-					_, err := db.Exec("INSERT INTO ImageTag (imageId, tagId) VALUES (?, ?)", imgId, tagID)
+					_, err := db.Exec("INSERT INTO ImageTag (imageId, tagId) SELECT ?, ? WHERE NOT EXISTS (SELECT 1 FROM ImageTag WHERE imageId = ? AND tagId = ?);", imgId, tagID, imgId, tagID)
+					// parent.Content().Refresh()
 					if err != nil {
-						parent.Canvas().Refresh(parent.Content())
 						dialog.ShowError(err, parent)
-						// return
 					} else {
-						parent.Canvas().Refresh(parent.Content())
 						dialog.ShowInformation("Success", "Tag Added", parent)
-						return
+						tagWindow.Close()
 					}
 				}()
 			}
@@ -364,11 +350,9 @@ func showTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int) {
 		for _, button := range buttons {
 			content.Add(button)
 		}
-		content.Refresh() // maybe optional
-
-		// worked before
-		parent.Content().Refresh()
+		// content.Refresh()
 	}()
+	// parent.Content().Refresh()
 }
 
 func createTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
