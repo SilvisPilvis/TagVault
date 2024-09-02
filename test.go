@@ -1,6 +1,7 @@
 package main
 
 import (
+	// this import makes the code crash due to nil pointer dereference error
 	// "main/db" // for sqlite tag storage
 
 	"database/sql" // for sql type
@@ -22,8 +23,8 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 
-	"github.com/grafana/pyroscope-go"
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/grafana/pyroscope-go" // for profiling
+	_ "github.com/mattn/go-sqlite3"   // sqlite3 database driver
 )
 
 type imageButton struct {
@@ -32,10 +33,10 @@ type imageButton struct {
 	image    *canvas.Image
 }
 
-type Tag struct {
-	Name  string
-	Value string
-}
+// type Tag struct {
+// 	Name  string
+// 	Value string
+// }
 
 func newImageButton(resource fyne.Resource, tapped func()) *imageButton {
 	img := &imageButton{onTapped: tapped}
@@ -61,6 +62,14 @@ func main() {
 	logger.Print("Load only visible images\n")
 	logger.Print("Fix sqlite insert ignore\n")
 	logger.Print("When adding tags show tags that aren't on the image\n")
+	logger.Print("Load images from the database\n")
+
+	logger.Print("Make the file extensions an array\n")
+	// imageTypes := map[string]int{
+	// 	".jpg":  1,
+	// 	".png":  1,
+	// 	".jpeg": 1,
+	// }
 
 	profiling := false
 
@@ -98,10 +107,12 @@ func main() {
 		})
 	}
 
+	// make a connection to the sqlite database
 	Db, err := sql.Open("sqlite3", "file:./index.db")
 	if err != nil {
 		panic(err.Error())
 	}
+	// set max open connections to 1
 	Db.SetMaxOpenConns(1)
 	defer Db.Close()
 
@@ -115,20 +126,26 @@ func main() {
 	// start sqlite db driver
 	db := Db
 	// db := db.Db
+	// set the journal mode to WAL = Write-Ahead Logging
+	// much performance very wow
 	// db.Exec("PRAGMA journal_mode=WAL")
+	// set the tables
+	// funny joke get it?
 	db.Exec("CREATE TABLE IF NOT EXISTS `Tag`(`id` INTEGER PRIMARY KEY NOT NULL, `name` VARCHAR(255) NOT NULL, `color` VARCHAR(7) NOT NULL);")
 	db.Exec("CREATE TABLE IF NOT EXISTS `Image`(`id` INTEGER PRIMARY KEY NOT NULL, `path` VARCHAR(1024) NOT NULL);")
-	db.Exec("CREATE TABLE `ImageTag`(`imageId` INTEGER NOT NULL, `tagId` INTEGER NOT NULL);")
-	// db.Close()
-	// db.Exec("PRAGMA foreign_keys=ON")
+	db.Exec("CREATE TABLE IF NOT EXISTS `ImageTag`(`imageId` INTEGER NOT NULL, `tagId` INTEGER NOT NULL);")
+
+	// test variable
+	testPath := `C:\Users\Silvestrs\Desktop\test`
 
 	// create new app
 	a := app.New()
 
 	// load icon from image
-	icon, err := fyne.LoadResourceFromPath("app.png")
+	icon, err := fyne.LoadResourceFromPath("app.ico")
 	if err != nil {
-		panic(err)
+		// handle the error i guess?
+		logger.Fatal("Failed to load icon: ", err, "\n")
 	}
 
 	// create new window
@@ -147,7 +164,7 @@ func main() {
 	sidebarScroll.Hide()
 
 	input := widget.NewEntry()
-	input.SetPlaceHolder("Enter directory path")
+	input.SetPlaceHolder("Enter a tag")
 
 	split := container.NewHSplit(scroll, sidebarScroll)
 	split.Offset = 1 // Start with sidebar hidden
@@ -223,7 +240,7 @@ func main() {
 							return
 						}
 
-						tagDisplay := container.NewHBox()
+						tagDisplay := container.NewAdaptiveGrid(4)
 
 						for imageTags.Next() {
 							var tagName string
@@ -236,7 +253,7 @@ func main() {
 						}
 
 						addTagButton := widget.NewButton("+", func() {
-							showTagWindow(a, w, db, imageId)
+							showTagWindow(a, w, db, imageId, tagDisplay)
 						})
 
 						createTagButton := widget.NewButton("Add Tag", func() {
@@ -261,37 +278,43 @@ func main() {
 
 	form := &widget.Form{
 		Items: []*widget.FormItem{
-			{Text: "Directory", Widget: input},
+			{Text: "Tag", Widget: input},
 		},
 		OnSubmit: func() {
-			content.RemoveAll()
-			displayImages(input.Text)
+			// replace this with sql to show only images with tags
+			// content.RemoveAll()
+			// displayImages(input.Text)
 		},
 	}
 
-	browseButton := widget.NewButton("Browse", func() {
-		dialog.ShowFolderOpen(func(uri fyne.ListableURI, err error) {
-			if err != nil {
-				dialog.ShowError(err, w)
-				return
-			}
-			if uri == nil {
-				return
-			}
-			input.SetText(uri.Path())
-			content.RemoveAll()
-			displayImages(uri.Path())
-		}, w)
-	})
+	// sitais on load/start 1 reizi
+	content.RemoveAll()
+	displayImages(testPath)
 
-	controls := container.NewBorder(nil, nil, nil, browseButton, form)
+	// browseButton := widget.NewButton("Browse", func() {
+	// 	dialog.ShowFolderOpen(func(uri fyne.ListableURI, err error) {
+	// 		if err != nil {
+	// 			dialog.ShowError(err, w)
+	// 			return
+	// 		}
+	// 		if uri == nil {
+	// 			return
+	// 		}
+	// 		input.SetText(uri.Path())
+	// 		content.RemoveAll()
+	// 		displayImages(uri.Path())
+	// 	}, w)
+	// })
+
+	// controls := container.NewBorder(nil, nil, nil, browseButton, form)
+	controls := container.NewBorder(nil, nil, nil, nil, form)
 	mainContainer := container.NewBorder(controls, nil, nil, nil, split)
 
 	w.SetContent(mainContainer)
 	w.ShowAndRun()
 }
 
-func showTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int) {
+func showTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int, tagList *fyne.Container) {
 	tagWindow := a.NewWindow("Add a Tag")
 
 	// content := container.NewGridWrap(fyne.NewSize(300, 200))
@@ -331,10 +354,11 @@ func showTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int) {
 			button.OnTapped = func() {
 				go func() {
 					_, err := db.Exec("INSERT INTO ImageTag (imageId, tagId) SELECT ?, ? WHERE NOT EXISTS (SELECT 1 FROM ImageTag WHERE imageId = ? AND tagId = ?);", imgId, tagID, imgId, tagID)
-					// parent.Content().Refresh()
+					parent.Content().Refresh()
 					if err != nil {
 						dialog.ShowError(err, parent)
 					} else {
+						tagList.Add(widget.NewButton(name, nil))
 						dialog.ShowInformation("Success", "Tag Added", parent)
 						tagWindow.Close()
 					}
@@ -416,13 +440,14 @@ func isImageFile(filename string) bool {
 }
 
 func truncateFilename(filename string, maxLength int) string {
-	if len(filename) <= maxLength {
-		return filename
-	}
+	// get the file extension
 	ext := filepath.Ext(filename)
+	// get the filename without extension
 	nameWithoutExt := filename[:len(filename)-len(ext)]
-	if len(ext) > maxLength-3 {
-		return nameWithoutExt[:maxLength-3] + "..."
+	// if filename without extension is bigger or equal to maxLength, return filename with extension
+	if len(nameWithoutExt) <= maxLength {
+		return filename
+	} else {
+		return nameWithoutExt[:maxLength] + ext
 	}
-	return nameWithoutExt[:maxLength-len(ext)-3] + "..." + ext
 }
