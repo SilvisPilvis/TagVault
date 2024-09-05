@@ -62,7 +62,7 @@ var (
 	logger        *log.Logger
 )
 
-const thumbnailSize = 256
+const thumbnailSize = 356
 
 func main() {
 	logger = log.New(os.Stdout, "", log.LstdFlags)
@@ -71,11 +71,13 @@ func main() {
 	db := setupDatabase()
 	defer db.Close()
 
-	// 	fmt.Println("Add pagination/infinite scroll")
-	// 	fmt.Println("Add color to tags")
-	// 	fmt.Println("Add time created to db")
-	// 	fmt.Println("Add sorting by time created")
-	// 	fmt.Println("Minimize widget updates:
+	logger.Println("Add pagination/infinite scroll")
+	logger.Println("Add color to tags")
+	logger.Println("Add time created to db")
+	logger.Println("Add sorting by time created")
+	logger.Println("loadImageResourceEfficient maybe load full size image and scale doen the resource")
+	logger.Println("Update sidebar not called")
+	// 	logger.Println("Minimize widget updates:
 	// Fyne's object tree walking is often triggered by widget updates. Try to reduce unnecessary updates by:
 
 	// Only updating widgets when their data actually changes
@@ -115,8 +117,6 @@ func main() {
 	split := container.NewHSplit(scroll, sidebarScroll)
 	split.Offset = 1 // Start with sidebar hidden
 
-	displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a)
-
 	testPath := getImagePath()
 
 	content.RemoveAll()
@@ -146,6 +146,8 @@ func main() {
 
 	controls := container.NewBorder(nil, nil, nil, settingsButton, form)
 	mainContainer := container.NewBorder(controls, nil, nil, nil, split)
+
+	displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, mainContainer)
 
 	displayImages(testPath)
 
@@ -228,7 +230,7 @@ func getImagePath() string {
 	return `C:\Users\Silvestrs\Desktop\test`
 }
 
-func createDisplayImagesFunction(db *sql.DB, w fyne.Window, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App) func(string) {
+func createDisplayImagesFunction(db *sql.DB, w fyne.Window, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App, mainContainer *fyne.Container) func(string) {
 	return func(dir string) {
 		// get images from directory
 		files, err := os.ReadDir(dir)
@@ -241,7 +243,10 @@ func createDisplayImagesFunction(db *sql.DB, w fyne.Window, sidebar *fyne.Contai
 		imageContainer := container.NewAdaptiveGrid(4)
 		// create a loading bar
 		loadingIndicator := widget.NewProgressBarInfinite()
-		content := container.NewVBox(loadingIndicator, imageContainer)
+		loadingIndicator.Start()
+		loadingMessage := widget.NewLabel("Loading images...")
+		content := container.NewVBox(loadingIndicator, loadingMessage, imageContainer)
+		mainContainer.Add(content)
 
 		var wg sync.WaitGroup
 		semaphore := make(chan struct{}, runtime.NumCPU())
@@ -266,8 +271,13 @@ func createDisplayImagesFunction(db *sql.DB, w fyne.Window, sidebar *fyne.Contai
 
 		go func() {
 			wg.Wait()
-			// w.SetContent(content) // this shit fixes the problem
+
 			// add content to container instead of window
+			// mainContainer.Add(content)
+			// w.SetContent(content) // this shit fixes the problem
+
+			loadingIndicator.Stop()
+			content.Remove(loadingMessage)
 			content.Remove(loadingIndicator)
 			canvas.Refresh(content)
 		}()
@@ -326,29 +336,16 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 		}
 
 		// set the image button image to the resource
-		logger.Println("Resource image not empty.", resource.Content()[:16])
+		// logger.Println("Resource image not empty.", resource.Content()[:16])
 		imgButton.image.Resource = resource
 		canvas.Refresh(imgButton)
 		resourceChan <- resource
-
-		// if the resource is none, set it to the placeholder
-		// if resource == nil {
-		// 	logger.Println("No resource image empty.")
-		// 	resource = placeholderResource
-		// } else {
-		// 	// else set the button image to the resource
-		// 	tmp := resource.Content()
-		// 	logger.Println("Resource image not empty.", tmp[:10])
-		// 	imgButton.image.Resource = resource
-		// 	canvas.Refresh(imgButton)
-		// 	resourceChan <- resource
-		// }
 	}()
 
 	// logger.Println("Displaying image:", path)
-	logger.Println("Parent conetnt: ", imageContainer.Objects)
-	logger.Println("Parent container visible: ", imageContainer.Visible())
-	logger.Println("Parent container size: ", imageContainer.Size())
+	// logger.Println("Parent conetnt: ", imageContainer.Objects)
+	// logger.Println("Parent container visible: ", imageContainer.Visible())
+	// logger.Println("Parent container size: ", imageContainer.Size())
 
 	resource := <-resourceChan
 	imgButton.onTapped = func() {
@@ -375,6 +372,9 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 // }
 
 func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resource, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App) {
+	logger.Println("Updating sidebar")
+
+	// clear sidebar
 	sidebar.RemoveAll()
 
 	fullImg := canvas.NewImageFromResource(resource)
@@ -546,6 +546,7 @@ func truncateFilename(filename string, maxLength int) string {
 }
 
 // Optimized function to load image resources
+// Use this for thumbnails only or add a thumbnail bool
 func loadImageResourceEfficient(path string) (fyne.Resource, error) {
 	if cachedResource, ok := resourceCache.Load(path); ok {
 		return cachedResource.(fyne.Resource), nil
