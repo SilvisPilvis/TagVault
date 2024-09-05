@@ -120,7 +120,7 @@ func main() {
 	testPath := getImagePath()
 
 	content.RemoveAll()
-	displayImages(testPath)
+
 	// displayImage(db, w, testPath, content, sidebar, sidebarScroll, split, a)
 
 	input := widget.NewEntry()
@@ -146,6 +146,8 @@ func main() {
 
 	controls := container.NewBorder(nil, nil, nil, settingsButton, form)
 	mainContainer := container.NewBorder(controls, nil, nil, nil, split)
+
+	displayImages(testPath)
 
 	// controls := container.NewBorder(nil, nil, nil, nil, form)
 	// mainContainer := container.NewBorder(controls, nil, nil, nil, split)
@@ -228,21 +230,27 @@ func getImagePath() string {
 
 func createDisplayImagesFunction(db *sql.DB, w fyne.Window, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App) func(string) {
 	return func(dir string) {
+		// get images from directory
 		files, err := os.ReadDir(dir)
 		if err != nil {
 			dialog.ShowError(err, w)
 			return
 		}
 
+		// make a grid to display images
 		imageContainer := container.NewAdaptiveGrid(4)
+		// create a loading bar
 		loadingIndicator := widget.NewProgressBarInfinite()
 		content := container.NewVBox(loadingIndicator, imageContainer)
 
 		var wg sync.WaitGroup
 		semaphore := make(chan struct{}, runtime.NumCPU())
 
+		// loop through images
 		for _, file := range files {
+			// check if it's an image
 			if !file.IsDir() && isImageFile(file.Name()) {
+				// get full image path
 				imgPath := filepath.Join(dir, file.Name())
 				wg.Add(1)
 				go func(path string) {
@@ -250,6 +258,7 @@ func createDisplayImagesFunction(db *sql.DB, w fyne.Window, sidebar *fyne.Contai
 					semaphore <- struct{}{}
 					defer func() { <-semaphore }()
 
+					// display image
 					displayImage(db, w, path, imageContainer, sidebar, sidebarScroll, split, a)
 				}(imgPath)
 			}
@@ -272,13 +281,16 @@ func isFile(path string) (bool, error) {
 }
 
 func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.Container, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App) {
+	// create a placeholder image
 	placeholderResource := fyne.NewStaticResource("placeholder", []byte{})
 	imgButton := newImageButton(placeholderResource, nil)
 
+	// truncate the image name
 	truncatedName := truncateFilename(filepath.Base(path), 10)
 	db.Exec("INSERT OR IGNORE INTO Image (path) VALUES (?)", path)
 	label := widget.NewLabel(truncatedName)
 
+	// make a parent container to hold the image button and label
 	imageTile := container.New(layout.NewVBoxLayout(), imgButton, label)
 	imageContainer.Add(imageTile)
 
