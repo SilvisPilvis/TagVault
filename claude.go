@@ -66,38 +66,36 @@ func main() {
 	db := setupDatabase()
 	defer db.Close()
 
-	fmt.Println("Add pagination/infinite scroll")
-	fmt.Println("Add color to tags")
-	fmt.Println("Add time created to db")
-	fmt.Println("Add sorting by time created")
-	fmt.Println("Minimize widget updates:
-Fyne's object tree walking is often triggered by widget updates. Try to reduce unnecessary updates by:
+	// 	fmt.Println("Add pagination/infinite scroll")
+	// 	fmt.Println("Add color to tags")
+	// 	fmt.Println("Add time created to db")
+	// 	fmt.Println("Add sorting by time created")
+	// 	fmt.Println("Minimize widget updates:
+	// Fyne's object tree walking is often triggered by widget updates. Try to reduce unnecessary updates by:
 
-Only updating widgets when their data actually changes
-Using Fyne's binding system for automatic updates
-Batching updates where possible
+	// Only updating widgets when their data actually changes
+	// Using Fyne's binding system for automatic updates
+	// Batching updates where possible
 
+	// Optimize layout:
+	// Complex layouts can lead to more time-consuming tree walks. Consider:
 
-Optimize layout:
-Complex layouts can lead to more time-consuming tree walks. Consider:
+	// Simplifying your UI structure
+	// Using containers efficiently (e.g., VBox, HBox instead of nested containers)
+	// Avoiding deep nesting of widgets
 
-Simplifying your UI structure
-Using containers efficiently (e.g., VBox, HBox instead of nested containers)
-Avoiding deep nesting of widgets
-
-
-Use canvas objects:
-For static or infrequently changing elements, consider using canvas objects instead of widgets. These are generally more lightweight.
-Implement custom widgets:
-If you have complex custom widgets, ensure they're implemented efficiently. Override the Refresh() method to minimize unnecessary redraws.
-Lazy loading:
-For large datasets or complex UIs, implement lazy loading techniques to render only visible elements.
-Caching:
-Implement caching mechanisms for expensive computations or frequently accessed data.
-Background processing:
-Move time-consuming operations off the main thread using goroutines, updating the UI only when necessary.
-Profiling and benchmarking:
-Continue using Go's profiling tools to identify specific bottlenecks. You might want to create benchmarks for critical parts of your app.")
+	// Use canvas objects:
+	// For static or infrequently changing elements, consider using canvas objects instead of widgets. These are generally more lightweight.
+	// Implement custom widgets:
+	// If you have complex custom widgets, ensure they're implemented efficiently. Override the Refresh() method to minimize unnecessary redraws.
+	// Lazy loading:
+	// For large datasets or complex UIs, implement lazy loading techniques to render only visible elements.
+	// Caching:
+	// Implement caching mechanisms for expensive computations or frequently accessed data.
+	// Background processing:
+	// Move time-consuming operations off the main thread using goroutines, updating the UI only when necessary.
+	// Profiling and benchmarking:
+	// Continue using Go's profiling tools to identify specific bottlenecks. You might want to create benchmarks for critical parts of your app.")
 
 	a := app.New()
 	w := setupMainWindow(a)
@@ -114,7 +112,8 @@ Continue using Go's profiling tools to identify specific bottlenecks. You might 
 
 	displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a)
 
-	testPath := getTestPath()
+	testPath := getImagePath()
+
 	content.RemoveAll()
 	displayImages(testPath)
 	// displayImage(db, w, testPath, content, sidebar, sidebarScroll, split, a)
@@ -215,7 +214,7 @@ func setupMainWindow(a fyne.App) fyne.Window {
 	return w
 }
 
-func getTestPath() string {
+func getImagePath() string {
 	if runtime.GOOS == "linux" {
 		return "/home/amaterasu/Pictures/"
 	}
@@ -508,38 +507,6 @@ func truncateFilename(filename string, maxLength int) string {
 		return nameWithoutExt[:maxLength] + ext
 	}
 }
-
-// New function to handle image loading more efficiently
-// func loadImagesAsync(dir string, imageContainer *fyne.Container, db *sql.DB, w fyne.Window, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App) {
-// 	files, err := os.ReadDir(dir)
-// 	if err != nil {
-// 		fmt.Print("loadImagesAsync")
-// 		dialog.ShowError(err, w)
-// 		return
-// 	}
-
-// 	var wg sync.WaitGroup
-// 	semaphore := make(chan struct{}, runtime.NumCPU()) // Limit concurrent goroutines
-
-// 	for _, file := range files {
-// 		if file.IsDir() || !isImageFile(file.Name()) {
-// 			continue
-// 		}
-
-// 		wg.Add(1)
-// 		go func(f os.DirEntry) {
-// 			defer wg.Done()
-// 			semaphore <- struct{}{}
-// 			defer func() { <-semaphore }()
-
-// 			imgPath := filepath.Join(dir, f.Name())
-// 			displayImage(db, w, imgPath, imageContainer, sidebar, sidebarScroll, split, a)
-// 		}(file)
-// 	}
-
-// 	wg.Wait()
-// 	imageContainer.Refresh()
-// }
 
 // Optimized function to load image resources
 func loadImageResourceEfficient(path string) (fyne.Resource, error) {
