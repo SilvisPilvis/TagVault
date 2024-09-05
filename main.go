@@ -69,6 +69,12 @@ func main() {
 	logger.Println("Add color to tags")
 	logger.Println("Add time created to db")
 	logger.Println("Add sorting by time created")
+	logger.Println("Add pagination/infinite scroll")
+	logger.Println("Add color to tags")
+	logger.Println("Add time created to db")
+	logger.Println("Add sorting by time created")
+	logger.Println("loadImageResourceEfficient maybe load full size image and scale doen the resource")
+	logger.Println("Update sidebar not called")
 	// 	logger.Println("Minimize widget updates:
 	// Fyne's object tree walking is often triggered by widget updates. Try to reduce unnecessary updates by:
 
