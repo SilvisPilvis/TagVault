@@ -62,7 +62,7 @@ var (
 	logger        *log.Logger
 )
 
-const thumbnailSize = 150
+const thumbnailSize = 256
 
 func main() {
 	logger = log.New(os.Stdout, "", log.LstdFlags)
@@ -266,6 +266,8 @@ func createDisplayImagesFunction(db *sql.DB, w fyne.Window, sidebar *fyne.Contai
 
 		go func() {
 			wg.Wait()
+			// w.SetContent(content) // this shit fixes the problem
+			// add content to container instead of window
 			content.Remove(loadingIndicator)
 			canvas.Refresh(content)
 		}()
@@ -314,42 +316,63 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 
 	// claude ai
 	go func() {
+		// load the image as a fyne resource
 		resource, err := loadImageResourceEfficient(path)
 		if err != nil {
-			logger.Printf("Error loading image %s: %v", path, err)
+			logger.Printf("No resource image empty %s: %v", path, err)
 			resourceChan <- placeholderResource
 			canvas.Refresh(imgButton)
 			return
 		}
 
+		// set the image button image to the resource
+		logger.Println("Resource image not empty.", resource.Content()[:16])
 		imgButton.image.Resource = resource
 		canvas.Refresh(imgButton)
 		resourceChan <- resource
+
+		// if the resource is none, set it to the placeholder
+		// if resource == nil {
+		// 	logger.Println("No resource image empty.")
+		// 	resource = placeholderResource
+		// } else {
+		// 	// else set the button image to the resource
+		// 	tmp := resource.Content()
+		// 	logger.Println("Resource image not empty.", tmp[:10])
+		// 	imgButton.image.Resource = resource
+		// 	canvas.Refresh(imgButton)
+		// 	resourceChan <- resource
+		// }
 	}()
 
-	fmt.Println("Displaying image:", path)
+	// logger.Println("Displaying image:", path)
+	logger.Println("Parent conetnt: ", imageContainer.Objects)
+	logger.Println("Parent container visible: ", imageContainer.Visible())
+	logger.Println("Parent container size: ", imageContainer.Size())
 
+	resource := <-resourceChan
 	imgButton.onTapped = func() {
-		resource := <-resourceChan
+		// updates the sidebar
 		updateSidebar(db, w, path, resource, sidebar, sidebarScroll, split, a)
 	}
 
 	// w.Canvas().Content().Refresh()
 }
 
-func loadImageResource(path string) (fyne.Resource, error) {
-	if cachedResource, ok := resourceCache.Load(path); ok {
-		return cachedResource.(fyne.Resource), nil
-	}
+// codeium
+// func loadImageResource(path string) (fyne.Resource, error) {
+// 	if cachedResource, ok := resourceCache.Load(path); ok {
+// 		return cachedResource.(fyne.Resource), nil
+// 	}
 
-	resource, err := fyne.LoadResourceFromPath(path)
-	if err != nil {
-		return nil, err
-	}
+// 	resource, err := fyne.LoadResourceFromPath(path)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	resourceCache.Store(path, resource)
-	return resource, nil
-}
+// 	resourceCache.Store(path, resource)
+// 	return resource, nil
+// }
 
 func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resource, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App) {
 	sidebar.RemoveAll()
@@ -583,8 +606,14 @@ func loadImageResourceEfficient(path string) (fyne.Resource, error) {
 		return nil, err
 	}
 
-	// Create a new static resource
+	// Create a new static resource with the thumbnail image
 	resource := fyne.NewStaticResource(filepath.Base(path), buf.Bytes())
+	// resource, err := fyne.LoadResourceFromPath(filepath.Base(path))
+	// if err != nil {
+	// 	logger.Fatalln(err)
+	// 	return nil, err
+	// }
+	// resource.SetContent(buf.Bytes())
 
 	// Store in cache
 	resourceCache.Store(path, resource)
