@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"image"
 	"image/color"
-	"io"
+	"image/draw"
+	"image/jpeg"
+	"image/png"
 	"log"
 	"os"
 	"path/filepath"
@@ -58,6 +61,8 @@ var (
 	resourceCache sync.Map
 	logger        *log.Logger
 )
+
+const thumbnailSize = 150
 
 func main() {
 	logger = log.New(os.Stdout, "", log.LstdFlags)
@@ -204,7 +209,7 @@ func setupMainWindow(a fyne.App) fyne.Window {
 	w := a.NewWindow("File Explorer")
 	w.Resize(fyne.NewSize(1000, 600))
 
-	icon, err := fyne.LoadResourceFromPath("app.ico")
+	icon, err := fyne.LoadResourceFromPath("icon.ico")
 	if err != nil {
 		logger.Fatal("Failed to load icon: ", err)
 	}
@@ -310,14 +315,11 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 		resourceChan <- resource
 	}()
 
-	// t1 := <-resourceChan
-
 	fmt.Println("Displaying image:", path)
 
 	imgButton.onTapped = func() {
 		resource := <-resourceChan
 		updateSidebar(db, w, path, resource, sidebar, sidebarScroll, split, a)
-		// updateSidebar(db, w, path, t1, sidebar, sidebarScroll, split, a)
 	}
 
 	// w.Canvas().Content().Refresh()
@@ -520,14 +522,57 @@ func loadImageResourceEfficient(path string) (fyne.Resource, error) {
 	}
 	defer file.Close()
 
-	// Read the file content
-	content, err := io.ReadAll(file)
+	// Decode the image
+	var img image.Image
+	// test:= image.Decode()
+	switch filepath.Ext(path) {
+	case ".jpg", ".jpeg":
+		img, _, err = image.Decode(file)
+		// img, err = jpeg.Decode(file)
+	case ".png":
+		img, _, err = image.Decode(file)
+		// img, err = png.Decode(file)
+	// Add more cases for other image types if needed
+	default:
+		return nil, fmt.Errorf("unsupported image format")
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate the thumbnail dimensions while maintaining aspect ratio
+	bounds := img.Bounds()
+	ratio := float64(bounds.Dx()) / float64(bounds.Dy())
+	var thumbWidth, thumbHeight int
+	if ratio > 1 {
+		thumbWidth = thumbnailSize
+		thumbHeight = int(float64(thumbnailSize) / ratio)
+	} else {
+		thumbHeight = thumbnailSize
+		thumbWidth = int(float64(thumbnailSize) * ratio)
+	}
+
+	// Create a new image with the thumbnail dimensions
+	thumbImg := image.NewRGBA(image.Rect(0, 0, thumbWidth, thumbHeight))
+
+	// Resize the image
+	draw.Draw(thumbImg, thumbImg.Bounds(), img, img.Bounds().Min, draw.Src)
+	// draw.ApproxBiLinear.Scale(thumbImg, thumbImg.Bounds(), img, img.Bounds(), draw.Over, nil)
+
+	// Encode the resized image
+	var buf bytes.Buffer
+	switch filepath.Ext(path) {
+	case ".jpg", ".jpeg":
+		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
+	case ".png":
+		err = png.Encode(&buf, thumbImg)
+	}
 	if err != nil {
 		return nil, err
 	}
 
 	// Create a new static resource
-	resource := fyne.NewStaticResource(filepath.Base(path), content)
+	resource := fyne.NewStaticResource(filepath.Base(path), buf.Bytes())
 
 	// Store in cache
 	resourceCache.Store(path, resource)
@@ -633,28 +678,6 @@ func createTagDisplay(db *sql.DB, imageId int) *fyne.Container {
 
 	return tagDisplay
 }
-
-// func createTagDisplay(db *sql.DB, imageId int) *fyne.Container {
-// 	tagDisplay := container.NewAdaptiveGrid(4)
-
-// 	rows, err := db.Query("SELECT Tag.name FROM ImageTag INNER JOIN Tag ON ImageTag.tagId = Tag.id WHERE ImageTag.imageId = ?", imageId)
-// 	if err != nil {
-// 		logger.Println("Error querying image tags:", err)
-// 		return tagDisplay
-// 	}
-// 	defer rows.Close()
-
-// 	for rows.Next() {
-// 		var tagName string
-// 		if err := rows.Scan(&tagName); err != nil {
-// 			logger.Println("Error scanning tag name:", err)
-// 			continue
-// 		}
-// 		tagDisplay.Add(widget.NewButton(tagName, nil))
-// 	}
-
-// 	return tagDisplay
-// }
 
 // Helper function to convert hex color to color.Color
 func colorFromHex(hex string) (color.Color, error) {
