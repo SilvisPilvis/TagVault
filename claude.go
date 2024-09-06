@@ -199,7 +199,7 @@ func setupDatabase() *sql.DB {
 func setupTables(db *sql.DB) {
 	tables := []string{
 		"CREATE TABLE IF NOT EXISTS `Tag`(`id` INTEGER PRIMARY KEY NOT NULL, `name` VARCHAR(255) NOT NULL, `color` VARCHAR(7) NOT NULL);",
-		"CREATE TABLE IF NOT EXISTS `Image`(`id` INTEGER PRIMARY KEY NOT NULL, `path` VARCHAR(1024) NOT NULL);",
+		"CREATE TABLE IF NOT EXISTS `Image`(`id` INTEGER PRIMARY KEY NOT NULL, `path` VARCHAR(1024) NOT NULL, `dateAdded` DATETIME NOT NULL);",
 		"CREATE TABLE IF NOT EXISTS `ImageTag`(`imageId` INTEGER NOT NULL, `tagId` INTEGER NOT NULL);",
 	}
 	for _, table := range tables {
@@ -324,7 +324,7 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 
 	// truncate the image name
 	truncatedName := truncateFilename(filepath.Base(path), 10)
-	db.Exec("INSERT OR IGNORE INTO Image (path) VALUES (?)", path)
+	db.Exec("INSERT INTO Image (path, dateAdded) SELECT ?, DATETIME('now') WHERE NOT EXISTS (SELECT 1 FROM Image WHERE path = ?);", path, path)
 	label := widget.NewLabel(truncatedName)
 
 	// make a parent container to hold the image button and label
@@ -346,6 +346,9 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 
 	fullLabel := widget.NewLabel(filepath.Base(path))
 	fullLabel.Wrapping = fyne.TextWrapWord
+
+	dateAdded := widget.NewLabel(getDate(db, path))
+	dateAdded.Wrapping = fyne.TextWrapWord
 
 	imageId := getImageId(db, path)
 	tagDisplay := createTagDisplay(db, imageId)
@@ -380,6 +383,16 @@ func getImageId(db *sql.DB, path string) int {
 		return 0
 	}
 	return imageId
+}
+
+func getDate(db *sql.DB, path string) string {
+	var date string
+	err := db.QueryRow("SELECT dateAdded FROM Image WHERE path = ?", path).Scan(&date)
+	if err != nil {
+		logger.Println("Error getting date:", err)
+		return ""
+	}
+	return date
 }
 
 func showTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int, tagList *fyne.Container) {
