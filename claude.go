@@ -782,7 +782,6 @@ func createSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 
 	// Create a container for the settings content
 	content := container.NewVBox(
-		widget.NewLabel("Settings"),
 		dbPathForm,
 		widget.NewLabel("Tags"),
 		tagList,
