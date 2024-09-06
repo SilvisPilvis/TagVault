@@ -75,6 +75,7 @@ func main() {
 	logger.Println("Add sorting by time created")
 	logger.Println("loadImageResourceEfficient maybe load full size image and scale doen the resource")
 	logger.Println("Update sidebar not called")
+	logger.Println("Possible race condition for sidebar open bug")
 	// 	logger.Println("Minimize widget updates:
 	// Fyne's object tree walking is often triggered by widget updates. Try to reduce unnecessary updates by:
 

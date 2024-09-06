@@ -62,7 +62,8 @@ var (
 	logger        *log.Logger
 )
 
-const thumbnailSize = 356
+// const thumbnailSize = 356
+const thumbnailSize = 256
 
 func main() {
 	logger = log.New(os.Stdout, "", log.LstdFlags)
@@ -350,6 +351,7 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 	resource := <-resourceChan
 	imgButton.onTapped = func() {
 		// updates the sidebar
+		logger.Println("Updating sidebar")
 		updateSidebar(db, w, path, resource, sidebar, sidebarScroll, split, a)
 	}
 
@@ -402,7 +404,8 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	sidebar.Add(createTagButton)
 
 	sidebarScroll.Show()
-	split.Offset = 0.6
+	// sidebar.Show()
+	split.Offset = 0.6 // was 0.7 by default
 	sidebar.Refresh()
 }
 
@@ -595,7 +598,7 @@ func loadImageResourceEfficient(path string) (fyne.Resource, error) {
 	draw.Draw(thumbImg, thumbImg.Bounds(), img, img.Bounds().Min, draw.Src)
 	// draw.ApproxBiLinear.Scale(thumbImg, thumbImg.Bounds(), img, img.Bounds(), draw.Over, nil)
 
-	// Encode the resized image
+	// // Encode the resized image
 	var buf bytes.Buffer
 	switch filepath.Ext(path) {
 	case ".jpg", ".jpeg":
@@ -607,7 +610,7 @@ func loadImageResourceEfficient(path string) (fyne.Resource, error) {
 		return nil, err
 	}
 
-	// Create a new static resource with the thumbnail image
+	// // Create a new static resource with the thumbnail image
 	resource := fyne.NewStaticResource(filepath.Base(path), buf.Bytes())
 	// resource, err := fyne.LoadResourceFromPath(filepath.Base(path))
 	// if err != nil {
