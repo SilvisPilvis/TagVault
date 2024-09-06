@@ -48,11 +48,11 @@ func (b *imageButton) CreateRenderer() fyne.WidgetRenderer {
 	return widget.NewSimpleRenderer(b.image)
 }
 
-// func (b *imageButton) Tapped(*fyne.PointEvent) {
-// 	if b.onTapped != nil {
-// 		b.onTapped()
-// 	}
-// }
+func (b *imageButton) Tapped(*fyne.PointEvent) {
+	if b.onTapped != nil {
+		b.onTapped()
+	}
+}
 
 var (
 	imageTypes = map[string]struct{}{
