@@ -77,7 +77,6 @@ func main() {
 	logger.Println("Add time created to db")
 	logger.Println("Add sorting by time created")
 	logger.Println("loadImageResourceEfficient maybe load full size image and scale down the resource")
-	logger.Println("Update sidebar not called")
 	// 	logger.Println("Minimize widget updates:
 	// Fyne's object tree walking is often triggered by widget updates. Try to reduce unnecessary updates by:
 
@@ -320,8 +319,7 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 	resource := <-resourceChan
 	imgButton.onTapped = func() {
 		// updates the sidebar
-		logger.Println("Updating sidebar")
-		updateSidebar(db, w, path, resource, sidebar, sidebarScroll, split, a)
+		updateSidebar(db, w, path, resource, sidebar, sidebarScroll, split, a, imageContainer)
 	}
 
 	// truncate the image name
@@ -336,7 +334,7 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 }
 
 // UNDER NO CIRCUMSTANCES CHANGE THE ORDER IN displayImage func OR THERE WILL BE ERRORS
-func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resource, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App) {
+func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resource, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App, imageContainer *fyne.Container) {
 	logger.Println("Update sidebar called")
 
 	// clear sidebar
@@ -363,10 +361,12 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	sidebar.Add(fullImg)
 	sidebar.Add(fullLabel)
 	sidebar.Add(tagDisplay)
-	sidebar.Add(addTagButton)
-	sidebar.Add(createTagButton)
+	sidebar.Add(container.NewGridWithColumns(2, addTagButton, createTagButton))
+	// sidebar.Add(addTagButton)
+	// sidebar.Add(createTagButton)
 
 	sidebarScroll.Show()
+	imageContainer.Refresh()
 	// sidebar.Show()
 	split.Offset = 0.6 // was 0.7 by default
 	sidebar.Refresh()
