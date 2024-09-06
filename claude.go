@@ -76,7 +76,7 @@ func main() {
 	logger.Println("Add color to tags")
 	logger.Println("Add time created to db")
 	logger.Println("Add sorting by time created")
-	logger.Println("loadImageResourceEfficient maybe load full size image and scale doen the resource")
+	logger.Println("loadImageResourceEfficient maybe load full size image and scale down the resource")
 	logger.Println("Update sidebar not called")
 	// 	logger.Println("Minimize widget updates:
 	// Fyne's object tree walking is often triggered by widget updates. Try to reduce unnecessary updates by:
@@ -297,33 +297,7 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 	// create a placeholder image
 	placeholderResource := fyne.NewStaticResource("placeholder", []byte{})
 	imgButton := newImageButton(placeholderResource, nil)
-
-	// truncate the image name
-	truncatedName := truncateFilename(filepath.Base(path), 10)
-	db.Exec("INSERT OR IGNORE INTO Image (path) VALUES (?)", path)
-	label := widget.NewLabel(truncatedName)
-
-	// make a parent container to hold the image button and label
-	imageTile := container.New(layout.NewVBoxLayout(), imgButton, label)
-	imageContainer.Add(imageTile)
-
 	resourceChan := make(chan fyne.Resource, 1)
-
-	// codeium
-	// go func() {
-	// 	resource, err := loadImageResource(path)
-	// 	if err != nil {
-	// 		logger.Printf("Error loading image %s: %v", path, err)
-	// 		resourceChan <- placeholderResource
-	// 		canvas.Refresh(imgButton)
-	// 		return
-	// 	}
-
-	// 	imgButton.image.Resource = resource
-	// 	canvas.Refresh(imgButton)
-	// 	resourceChan <- resource
-	// }()
-	// resource := <-resourceChan
 
 	// claude ai
 	go func() {
@@ -343,11 +317,6 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 		resourceChan <- resource
 	}()
 
-	// logger.Println("Displaying image:", path)
-	// logger.Println("Parent conetnt: ", imageContainer.Objects)
-	// logger.Println("Parent container visible: ", imageContainer.Visible())
-	// logger.Println("Parent container size: ", imageContainer.Size())
-
 	resource := <-resourceChan
 	imgButton.onTapped = func() {
 		// updates the sidebar
@@ -355,26 +324,19 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 		updateSidebar(db, w, path, resource, sidebar, sidebarScroll, split, a)
 	}
 
-	// w.Canvas().Content().Refresh()
+	// truncate the image name
+	truncatedName := truncateFilename(filepath.Base(path), 10)
+	db.Exec("INSERT OR IGNORE INTO Image (path) VALUES (?)", path)
+	label := widget.NewLabel(truncatedName)
+
+	// make a parent container to hold the image button and label
+	imageTile := container.New(layout.NewVBoxLayout(), imgButton, label)
+	imageContainer.Add(imageTile)
+
 }
 
-// codeium
-// func loadImageResource(path string) (fyne.Resource, error) {
-// 	if cachedResource, ok := resourceCache.Load(path); ok {
-// 		return cachedResource.(fyne.Resource), nil
-// 	}
-
-// 	resource, err := fyne.LoadResourceFromPath(path)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	resourceCache.Store(path, resource)
-// 	return resource, nil
-// }
-
 func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resource, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App) {
-	logger.Println("Updating sidebar")
+	logger.Println("Update sidebar called")
 
 	// clear sidebar
 	sidebar.RemoveAll()
