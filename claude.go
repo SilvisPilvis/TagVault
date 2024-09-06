@@ -335,6 +335,7 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 
 }
 
+// UNDER NO CIRCUMSTANCES CHANGE THE ORDER IN displayImage func OR THERE WILL BE ERRORS
 func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resource, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App) {
 	logger.Println("Update sidebar called")
 
