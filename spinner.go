@@ -6,19 +6,34 @@ import (
 )
 
 type Spinner struct {
-	sybmols  []string
-	frame    int
-	maxFrame int
+	sybmols   []string
+	frame     int
+	maxFrames int
 }
 
-func Tick(s Spinner) int {
-	fmt.Print(s.sybmols[s.frame])
-	if s.frame+1 <= s.maxFrame {
-		s.frame += 1
+func (s Spinner) NewSpinner() *Spinner {
+	// sybmols := []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
+	// sybmols := []string{"⠇", "⠏", "⠹", "⠼"}
+	// sybmols := []string{"⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"}
+	sybmols := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+	return &Spinner{
+		sybmols:   sybmols,
+		frame:     0,
+		maxFrames: len(sybmols) - 1,
+	}
+}
+
+func (s Spinner) GetMaxFrames() int {
+	return s.maxFrames
+}
+
+func (s *Spinner) Tick() {
+	fmt.Printf("\r%s", s.sybmols[s.frame])
+	if s.frame+1 <= s.maxFrames {
+		s.frame++
 	} else {
 		s.frame = 0
 	}
-	return s.frame
 }
 
 func (s Spinner) Clear() {
@@ -26,14 +41,10 @@ func (s Spinner) Clear() {
 }
 
 func main() {
-	spinner := Spinner{
-		sybmols:  []string{"⠇", "⠏", "⠹", "⠼"},
-		frame:    0,
-		maxFrame: 3,
-	}
-	fmt.Print("Loading ")
+	spinner := new(Spinner).NewSpinner()
+	fmt.Print("  Loading")
 	for {
-		spinner.frame = Tick(spinner)
+		spinner.Tick()
 		time.Sleep(250 * time.Millisecond)
 		spinner.Clear()
 	}

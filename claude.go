@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"image/draw"
+
+	// "image/draw"
 	"image/jpeg"
 	"image/png"
 	"log"
@@ -16,6 +17,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"golang.org/x/image/draw"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -246,6 +249,7 @@ func createDisplayImagesFunction(db *sql.DB, w fyne.Window, sidebar *fyne.Contai
 		loadingIndicator.Start()
 		loadingMessage := widget.NewLabel("Loading images...")
 		content := container.NewVBox(loadingIndicator, loadingMessage, imageContainer)
+		// content := container.NewGridWithRows(3, loadingIndicator, loadingMessage, imageContainer)
 		mainContainer.Add(content)
 
 		var wg sync.WaitGroup
@@ -330,10 +334,9 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 	// make a parent container to hold the image button and label
 	imageTile := container.New(layout.NewVBoxLayout(), imgButton, label)
 	imageContainer.Add(imageTile)
-
 }
 
-// UNDER NO CIRCUMSTANCES CHANGE THE ORDER IN displayImage func OR THERE WILL BE ERRORS
+// UNDER NO CIRCUMSTANCES CHANGE THE ORDER IN displayImage func OR THERE WILL BE ERRORS WHEN FYNE IS LOADING IMAGES
 func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resource, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App, imageContainer *fyne.Container) {
 	logger.Println("Update sidebar called")
 
@@ -341,6 +344,7 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	sidebar.RemoveAll()
 
 	fullImg := canvas.NewImageFromResource(resource)
+	// fullImg := canvas.NewImageFromFile(path)
 	fullImg.FillMode = canvas.ImageFillContain
 	fullImg.SetMinSize(fyne.NewSize(200, 200))
 
@@ -568,11 +572,12 @@ func loadImageResourceEfficient(path string) (fyne.Resource, error) {
 	}
 
 	// Create a new image with the thumbnail dimensions
+
 	thumbImg := image.NewRGBA(image.Rect(0, 0, thumbWidth, thumbHeight))
 
 	// Resize the image
-	draw.Draw(thumbImg, thumbImg.Bounds(), img, img.Bounds().Min, draw.Src)
-	// draw.ApproxBiLinear.Scale(thumbImg, thumbImg.Bounds(), img, img.Bounds(), draw.Over, nil)
+	// draw.Draw(thumbImg, thumbImg.Bounds(), img, img.Bounds().Min, draw.Src)
+	draw.ApproxBiLinear.Scale(thumbImg, thumbImg.Bounds(), img, img.Bounds(), draw.Over, nil)
 
 	// // Encode the resized image
 	var buf bytes.Buffer
