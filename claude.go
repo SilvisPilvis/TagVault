@@ -515,6 +515,22 @@ func isImageFile(filename string) bool {
 	return ok
 }
 
+func isImageFileMap(filename string) bool {
+	// create a map of image extensions
+	imageTypes := map[string]int{
+		".jpg":  1,
+		".png":  1,
+		".jpeg": 1,
+		".gif":  1,
+		".bmp":  1,
+		".ico":  1,
+	}
+	// get the file extension
+	ext := strings.ToLower(filepath.Ext(filename))
+	// if the file extension is in the map return true
+	return imageTypes[ext] != 0
+}
+
 func truncateFilename(filename string, maxLength int) string {
 	// get the file extension
 	ext := filepath.Ext(filename)
