@@ -1,4 +1,4 @@
-# ![A simple file management app with tags](./icon.png)
+# ![App icon: ](./icon.png) A simple file management app with tags.
 
 Images:
 ![App window demo: ](https://github.com/SilvisPilvis/rTagger/blob/main/demo.png?raw=true)
