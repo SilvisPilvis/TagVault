@@ -27,6 +27,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
 	"github.com/grafana/pyroscope-go"
@@ -88,6 +89,12 @@ const thumbnailSize = 256
 
 // 	return theme.DefaultTheme().Color(name, variant)
 // }
+
+type Options struct {
+	DatabasePath string
+	Profiling    bool
+	Timezone     int // Timezone like UTC+3 or UTC-3
+}
 
 func main() {
 	logger = log.New(os.Stdout, "", log.LstdFlags)
@@ -165,9 +172,10 @@ func main() {
 		},
 	}
 
-	settingsButton := widget.NewButton("Settings", func() {
+	settingsButton := widget.NewButton("", func() {
 		createSettingsWindow(a, w, db)
 	})
+	settingsButton.Icon = theme.SettingsIcon()
 
 	controls := container.NewBorder(nil, nil, nil, settingsButton, form)
 	mainContainer := container.NewBorder(controls, nil, nil, nil, split)
