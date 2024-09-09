@@ -64,7 +64,6 @@ func setupMainWindow(a fyne.App) fyne.Window {
 }
 
 func main() {
-
 	a := app.New()
 	w := setupMainWindow(a)
 

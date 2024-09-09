@@ -515,7 +515,7 @@ func showTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int, tagLis
 	tagWindow.Show()
 
 	go func() {
-		tags, err := db.Query("SELECT id, name FROM Tag WHERE id NOT IN (SELECT tagId FROM ImageTag WHERE imageId = ?)", imgId)
+		tags, err := db.Query("SELECT id, name, color FROM Tag WHERE id NOT IN (SELECT tagId FROM ImageTag WHERE imageId = ?)", imgId)
 		if err != nil {
 			parent.Canvas().Refresh(parent.Content())
 			fmt.Print("showTagWindow")
@@ -524,11 +524,12 @@ func showTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int, tagLis
 		}
 		defer tags.Close()
 
-		var buttons []*widget.Button
+		var buttons []*fyne.Container
 		for tags.Next() {
 			var id int
 			var name string
-			if err := tags.Scan(&id, &name); err != nil {
+			var color string
+			if err := tags.Scan(&id, &name, &color); err != nil {
 				parent.Canvas().Refresh(parent.Content())
 				fmt.Print("showTagWindow")
 				dialog.ShowError(err, parent)
@@ -536,6 +537,11 @@ func showTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int, tagLis
 			}
 
 			button := widget.NewButton(name, nil)
+			button.Importance = widget.LowImportance
+			c, _ := colorFromHex(color)
+			rect := canvas.NewRectangle(c)
+			rect.CornerRadius = 5
+
 			tagID := id
 			button.OnTapped = func() {
 				go func() {
@@ -545,13 +551,14 @@ func showTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int, tagLis
 						fmt.Print("showTagWindow")
 						dialog.ShowError(err, parent)
 					} else {
-						tagList.Add(widget.NewButton(name, nil))
+						tagList.Add(container.NewPadded(container.NewStack(rect, button)))
+						tagList.Refresh()
 						dialog.ShowInformation("Success", "Tag Added", parent)
 						tagWindow.Close()
 					}
 				}()
 			}
-			buttons = append(buttons, button)
+			buttons = append(buttons, container.NewPadded(container.NewStack(rect, button)))
 		}
 
 		tagWindow.Canvas().Refresh(content)
@@ -792,13 +799,9 @@ func createTagDisplay(db *sql.DB, imageId int) *fyne.Container {
 
 		tagButton := widget.NewButton(tagName, nil)
 		tagButton.Importance = widget.LowImportance
-
-		// Set button color based on the tag color
-		// if c, err := colorFromHex(tagColor); err == nil {
-		// 	rect := canvas.NewRectangle(c)
-		// }
 		c, _ := colorFromHex(tagColor)
 		rect := canvas.NewRectangle(c)
+		rect.CornerRadius = 5
 
 		tagButton.OnTapped = func() {
 			dialog.ShowConfirm("Remove Tag", "Are you sure you want to remove this tag?", func(remove bool) {
@@ -813,8 +816,10 @@ func createTagDisplay(db *sql.DB, imageId int) *fyne.Container {
 				}
 			}, nil)
 		}
-
-		tagDisplay.Add(container.NewStack(rect, tagButton))
+		// Old version
+		// tagDisplay.Add(container.NewStack(rect, tagButton))
+		// New version with padding
+		tagDisplay.Add(container.NewPadded(container.NewStack(rect, tagButton)))
 	}
 
 	return tagDisplay
