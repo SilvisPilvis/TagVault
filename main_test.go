@@ -33,8 +33,8 @@ func TestWindowIcon(t *testing.T) {
 	testApp.SetIcon(icon)
 
 	// Check if the window icon is set
-	assert.NotNil(t, window.Icon(), "Window icon is not set")
-	assert.NotNil(t, testApp.Icon(), "Window icon is not set")
+	assert.NotNil(t, window.Icon(), "Window icon is nil so not set")
+	assert.NotNil(t, testApp.Icon(), "Window icon is nil so not set")
 	// assert.Nil(t, window.Icon(), "Window icon is not set")
 	// assert.Nil(t, testApp.Icon(), "Window icon is not set")
 }

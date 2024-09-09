@@ -457,6 +457,7 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	// fullImg := canvas.NewImageFromFile(path)
 	fullImg.FillMode = canvas.ImageFillContain
 	fullImg.SetMinSize(fyne.NewSize(200, 200))
+	paddedImg := container.NewPadded(fullImg)
 
 	fullLabel := widget.NewLabel(filepath.Base(path))
 	fullLabel.Wrapping = fyne.TextWrapWord
@@ -475,18 +476,17 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 		createTagWindow(a, w, db)
 	})
 
-	sidebar.Add(fullImg)
+	// sidebar.Add(fullImg)
+	sidebar.Add(paddedImg)
 	sidebar.Add(fullLabel)
 	sidebar.Add(dateAdded)
 	sidebar.Add(tagDisplay)
 	sidebar.Add(container.NewGridWithColumns(2, addTagButton, createTagButton))
-	// sidebar.Add(addTagButton)
-	// sidebar.Add(createTagButton)
 
 	sidebarScroll.Show()
 	imageContainer.Refresh()
 	// sidebar.Show()
-	split.Offset = 0.6 // was 0.7 by default
+	split.Offset = 0.65 // was 0.7 by default
 	sidebar.Refresh()
 }
 
