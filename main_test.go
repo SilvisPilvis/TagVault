@@ -8,22 +8,13 @@ import (
 	"fyne.io/fyne/v2/test"
 )
 
-// func TestMain(t *testing.T) {
-// 	t.Run("test", func(t *testing.T) {
-// 		t.Log("test")
-// 	})
-// }
-
-// var testApp = test.NewApp()
-// var window = setupMainWindowTest(testApp, t)
+var (
+	t       *testing.T
+	testApp = test.NewApp()
+	window  = setupMainWindowTest(testApp, t)
+)
 
 func TestMainWindowCreation(t *testing.T) {
-	// Create a test app
-	testApp := test.NewApp()
-
-	// Call the function that creates your main window
-	window := setupMainWindowTest(testApp, t)
-
 	// Check if the window was created
 	if window == nil {
 		t.Error("Main window was not created")
@@ -32,12 +23,6 @@ func TestMainWindowCreation(t *testing.T) {
 }
 
 func TestWindowIcon(t *testing.T) {
-	// Create a test app
-	testApp := test.NewApp()
-
-	// Call the function that creates your main window
-	window := setupMainWindowTest(testApp, t)
-
 	// Load the icon
 	icon, err := fyne.LoadResourceFromPath("icon.ico")
 	if err != nil {
@@ -60,12 +45,6 @@ func TestWindowIcon(t *testing.T) {
 }
 
 func TestWindowSize(t *testing.T) {
-	// Create a test app
-	testApp := test.NewApp()
-
-	// Call the function that creates your main window
-	window := setupMainWindowTest(testApp, t)
-
 	// Check the window size
 	expectedSize := fyne.NewSize(1000, 600)
 	if window.Canvas().Size() != expectedSize {
@@ -74,26 +53,13 @@ func TestWindowSize(t *testing.T) {
 }
 
 func TestWindowContent(t *testing.T) {
-	// Create a test app
-	testApp := test.NewApp()
-
-	// Call the function that creates your main window
-	window := setupMainWindowTest(testApp, t)
-
 	// Check if the window content is set
 	if window.Content() == nil {
 		t.Error("Window content is not set")
 	}
-
 }
 
 func TestWindowTitle(t *testing.T) {
-	// Create a test app
-	testApp := test.NewApp()
-
-	// Call the function that creates your main window
-	window := setupMainWindowTest(testApp, t)
-
 	// Check the window title
 	if window.Title() != "File Explorer" {
 		t.Errorf("Expected window title 'File Explorer', got '%s' instead", window.Title())

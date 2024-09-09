@@ -453,7 +453,7 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	fullLabel := widget.NewLabel(filepath.Base(path))
 	fullLabel.Wrapping = fyne.TextWrapWord
 
-	dateAdded := widget.NewLabel(getDate(db, path))
+	dateAdded := widget.NewLabel("Date Added: " + getDate(db, path))
 	dateAdded.Wrapping = fyne.TextWrapWord
 
 	imageId := getImageId(db, path)
@@ -794,15 +794,11 @@ func createTagDisplay(db *sql.DB, imageId int) *fyne.Container {
 		tagButton.Importance = widget.LowImportance
 
 		// Set button color based on the tag color
-		if c, err := colorFromHex(tagColor); err == nil {
-			// rect := canvas.NewRectangle(c)
-			fmt.Print(c)
-			img := image.NewRGBA(image.Rect(0, 0, 100, 100))
-			test := fyne.NewStaticResource("tag", img.Pix)
-			// draw.Draw(img, img.Bounds(), &image.Uniform{rect.FillColor}, image.Point{}, draw.Src)
-
-			tagButton.SetIcon(test)
-		}
+		// if c, err := colorFromHex(tagColor); err == nil {
+		// 	rect := canvas.NewRectangle(c)
+		// }
+		c, _ := colorFromHex(tagColor)
+		rect := canvas.NewRectangle(c)
 
 		tagButton.OnTapped = func() {
 			dialog.ShowConfirm("Remove Tag", "Are you sure you want to remove this tag?", func(remove bool) {
@@ -818,7 +814,7 @@ func createTagDisplay(db *sql.DB, imageId int) *fyne.Container {
 			}, nil)
 		}
 
-		tagDisplay.Add(tagButton)
+		tagDisplay.Add(container.NewStack(rect, tagButton))
 	}
 
 	return tagDisplay
