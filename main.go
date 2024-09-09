@@ -469,6 +469,7 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 
 	sidebar.Add(fullImg)
 	sidebar.Add(fullLabel)
+	sidebar.Add(dateAdded)
 	sidebar.Add(tagDisplay)
 	sidebar.Add(container.NewGridWithColumns(2, addTagButton, createTagButton))
 	// sidebar.Add(addTagButton)
@@ -493,7 +494,7 @@ func getImageId(db *sql.DB, path string) int {
 
 func getDate(db *sql.DB, path string) string {
 	var date string
-	err := db.QueryRow("SELECT dateAdded FROM Image WHERE path = ?", path).Scan(&date)
+	err := db.QueryRow("SELECT STRFTIME('%H:%M %d-%m-%Y', DATETIME(dateAdded, '+3 HOURS')) FROM Image WHERE path = ?", path).Scan(&date)
 	if err != nil {
 		logger.Println("Error getting date:", err)
 		return ""
@@ -884,6 +885,7 @@ func createSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 		dbPathForm,
 		widget.NewLabel("Tags"),
 		tagList,
+		widget.NewLabel("Timezone in UTC: UTC+3"),
 	)
 
 	settingsWindow.SetContent(content)
