@@ -8,6 +8,7 @@ import (
 	"image/color"
 
 	// "image/draw"
+	// "errors"
 	"image/jpeg"
 	"image/png"
 	"log"
@@ -68,6 +69,26 @@ var (
 // const thumbnailSize = 356
 const thumbnailSize = 256
 
+// type theme struct {
+// Color color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xFF},
+// PrimaryColor: color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xFF},
+// TextColor: color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xFF},
+// Font:    theme.DefaultFont,
+// ColorNameBackground theme.ColorNameBackground
+// ColorNameForeground theme.ColorNameForeground
+// }
+
+// func (m theme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
+// 	if name == theme.ColorNameBackground {
+// 		if variant == theme.VariantLight {
+// 			return color.White
+// 		}
+// 		return color.Black
+// 	}
+
+// 	return theme.DefaultTheme().Color(name, variant)
+// }
+
 func main() {
 	logger = log.New(os.Stdout, "", log.LstdFlags)
 
@@ -77,15 +98,7 @@ func main() {
 
 	logger.Println("Check Obsidian Todo list")
 
-	logger.Println(os.UserHomeDir())
-
-	// logger.Println("Add pagination/infinite scroll")
-	// logger.Println("Add color to tags")
-	// logger.Println("Add time created to db")
-	// logger.Println("Add sorting by time created")
-	// logger.Println("loadImageResourceEfficient maybe load full size image and scale down the resource")
-	// logger.Println("Fix theme color")
-	// 	logger.Println("Minimize widget updates:
+	// logger.Println("Minimize widget updates:
 	// Fyne's object tree walking is often triggered by widget updates. Try to reduce unnecessary updates by:
 
 	// Only updating widgets when their data actually changes
@@ -115,13 +128,15 @@ func main() {
 	a := app.New()
 	w := setupMainWindow(a)
 
-	// a.Settings().SetTheme(theme.LightTheme())
+	// discoverImages(db)
+
+	// a.Settings().SetTheme(&theme)
 
 	content := container.NewVBox()
 	scroll := container.NewVScroll(content)
 
 	sidebar := container.NewVBox()
-	sidebarScroll := container.NewScroll(sidebar)
+	sidebarScroll := container.NewVScroll(sidebar)
 	sidebarScroll.Hide()
 
 	split := container.NewHSplit(scroll, sidebarScroll)
@@ -157,7 +172,8 @@ func main() {
 	controls := container.NewBorder(nil, nil, nil, settingsButton, form)
 	mainContainer := container.NewBorder(controls, nil, nil, nil, split)
 
-	displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, mainContainer)
+	displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, content)
+	// displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, mainContainer)
 
 	displayImages(testPath)
 
@@ -236,11 +252,88 @@ func setupMainWindow(a fyne.App) fyne.Window {
 func getImagePath() string {
 	// os.UserHomeDir()
 	userHome, _ := os.UserHomeDir()
+	// userHome + "/Pictures/"
+	// userHome + "/Documents/"
+	// userHome + "/Desktop/"
+	// userHome + "/Downloads/"
+	// userHome + "/Music/"
+	// userHome + "/Videos/"
 	if runtime.GOOS == "linux" {
 		return userHome + "/Pictures/"
 	}
 	return `C:\Users\Silvestrs\Desktop\test`
 }
+
+// func discoverImages() []string {
+// var images []string
+// userHome, _ := os.UserHomeDir()
+// userHome + "/Pictures/"
+// userHome + "/Documents/"
+// userHome + "/Desktop/"
+// userHome + "/Downloads/"
+// userHome + "/Music/"
+// userHome + "/Videos/"
+// return nil
+// }
+
+// func discoverImages(db *sql.DB) (bool, error) {
+// 	userHome, _ := os.UserHomeDir()
+
+// 	directories := []string{
+// 		userHome + "/Pictures/",
+// 		userHome + "/Documents/",
+// 		userHome + "/Desktop/",
+// 		userHome + "/Downloads/",
+// 		userHome + "/Music/",
+// 		userHome + "/Videos/",
+// 	}
+
+// 	// for each directory
+// 	for _, directory := range directories {
+// 		// walk the directory
+// 		err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
+// 			// if error, return error
+// 			if err != nil {
+// 				return errors.New("Error walking directory: " + err.Error())
+// 			}
+// 			// if directory, return nil
+// 			if !info.IsDir() {
+// 				// if image
+// 				if isImageFileMap(path) {
+// 					// add image path to database
+// 					db.Exec("INSERT INTO Image (path, dateAdded) SELECT ?, DATETIME('now') WHERE NOT EXISTS (SELECT 1 FROM Image WHERE path = ?);", path, path)
+// 				}
+// 			}
+// 			return errors.New("Error walking directory: file is directory")
+// 		})
+// 		// if walk error, return error
+// 		if err != nil {
+// 			return false, errors.New("Error walking directory: " + err.Error())
+// 		}
+// 	}
+
+// 	// if everything is ok, return true
+// 	return true, nil
+// }
+
+// func getImagesFromDatabase(db *sql.DB) ([]string, error) {
+// 	images, err := db.Query("SELECT path FROM Image")
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer images.Close()
+
+// 	var imagePaths []string
+// 	for images.Next() {
+// 		var path string
+// 		if err := images.Scan(&path); err != nil {
+// 			return nil, err
+// 		}
+// 		imagePaths = append(imagePaths, path)
+// 	}
+
+// 	return imagePaths, nil
+// }
 
 func createDisplayImagesFunction(db *sql.DB, w fyne.Window, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App, mainContainer *fyne.Container) func(string) {
 	return func(dir string) {

@@ -29,12 +29,6 @@ func TestMainWindowCreation(t *testing.T) {
 		t.Error("Main window was not created")
 	}
 
-	// Check if the window icon is set
-	// if window.Icon() == nil {
-	// 	t.Error("Window icon is not set")
-	// }
-
-	// You can add more specific checks here based on your window setup
 }
 
 func TestWindowIcon(t *testing.T) {
@@ -106,7 +100,6 @@ func TestWindowTitle(t *testing.T) {
 	}
 }
 
-// You might need to modify your setupMainWindow function to accept an app parameter
 func setupMainWindowTest(a fyne.App, t *testing.T) fyne.Window {
 	w := a.NewWindow("File Explorer")
 	w.SetTitle("File Explorer")
