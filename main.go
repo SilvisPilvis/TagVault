@@ -75,12 +75,16 @@ func main() {
 	db := setupDatabase()
 	defer db.Close()
 
-	logger.Println("Add pagination/infinite scroll")
-	logger.Println("Add color to tags")
-	logger.Println("Add time created to db")
-	logger.Println("Add sorting by time created")
-	logger.Println("loadImageResourceEfficient maybe load full size image and scale down the resource")
-	logger.Println("Fix theme color")
+	logger.Println("Check Obsidian Todo list")
+
+	logger.Println(os.UserHomeDir())
+
+	// logger.Println("Add pagination/infinite scroll")
+	// logger.Println("Add color to tags")
+	// logger.Println("Add time created to db")
+	// logger.Println("Add sorting by time created")
+	// logger.Println("loadImageResourceEfficient maybe load full size image and scale down the resource")
+	// logger.Println("Fix theme color")
 	// 	logger.Println("Minimize widget updates:
 	// Fyne's object tree walking is often triggered by widget updates. Try to reduce unnecessary updates by:
 
@@ -230,8 +234,10 @@ func setupMainWindow(a fyne.App) fyne.Window {
 }
 
 func getImagePath() string {
+	// os.UserHomeDir()
+	userHome, _ := os.UserHomeDir()
 	if runtime.GOOS == "linux" {
-		return "/home/amaterasu/Pictures/"
+		return userHome + "/Pictures/"
 	}
 	return `C:\Users\Silvestrs\Desktop\test`
 }
