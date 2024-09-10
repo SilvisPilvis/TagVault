@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"math"
 
 	// "image/draw"
 	// "errors"
@@ -606,6 +607,24 @@ func createTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 	tagWindow.SetTitle("Create a Tag")
 
 	var chosenColor color.Color = color.White
+
+	colorPreviewRect := canvas.NewRectangle(color.White)
+	colorPreviewRect.SetMinSize(fyne.NewSize(50, 50))
+
+	// r := widget.NewSlider(0, 255)
+	// g := widget.NewSlider(0, 255)
+	// b := widget.NewSlider(0, 255)
+	h := widget.NewSlider(0, 359)
+	s := widget.NewSlider(0, 1)
+	v := widget.NewSlider(0, 1)
+	// this should be some blue color
+	h.Value = 200
+	h.Step = 1
+	s.Value = 0
+	s.Step = 0.1
+	v.Value = 100
+	v.Step = 0.1
+
 	colorButton := widget.NewButton("Choose Tag Color", nil)
 	stringInput := widget.NewEntry()
 	stringInput.SetPlaceHolder("Enter Tag name")
@@ -895,6 +914,41 @@ func createTagDisplay(db *sql.DB, imageId int) *fyne.Container {
 	return tagDisplay
 }
 
+// Helper function to convert a HSV color to Hex color string
+
+func HSVToHex(h, s, v float64) string {
+	h = math.Mod(h, 360)            // Ensure hue is between 0 and 359
+	s = math.Max(0, math.Min(1, s)) // Clamp saturation between 0 and 1
+	v = math.Max(0, math.Min(1, v)) // Clamp value between 0 and 1
+
+	c := v * s
+	x := c * (1 - math.Abs(math.Mod(h/60, 2)-1))
+	m := v - c
+
+	var r, g, b float64
+
+	switch {
+	case h < 60:
+		r, g, b = c, x, 0
+	case h < 120:
+		r, g, b = x, c, 0
+	case h < 180:
+		r, g, b = 0, c, x
+	case h < 240:
+		r, g, b = 0, x, c
+	case h < 300:
+		r, g, b = x, 0, c
+	default:
+		r, g, b = c, 0, x
+	}
+
+	r = (r + m) * 255
+	g = (g + m) * 255
+	b = (b + m) * 255
+
+	return fmt.Sprintf("#%02X%02X%02X", int(r), int(g), int(b))
+}
+
 // Helper function to convert hex color to color.Color
 func colorFromHex(hex string) (color.Color, error) {
 	hex = strings.TrimPrefix(hex, "#")
@@ -914,7 +968,7 @@ func colorFromHex(hex string) (color.Color, error) {
 }
 
 // Add a settings window
-func createSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB, options Options) {
+func createSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB, options *Options) {
 	settingsWindow := a.NewWindow("Settings")
 
 	// Create a form for database path
