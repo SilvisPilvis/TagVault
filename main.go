@@ -144,7 +144,7 @@ func main() {
 	// Profiling and benchmarking:
 	// Continue using Go's profiling tools to identify specific bottlenecks. You might want to create benchmarks for critical parts of your app.")
 
-	a := app.New()
+	a := app.NewWithID("TagVault")
 	w := setupMainWindow(a)
 
 	// discoverImages(db)
