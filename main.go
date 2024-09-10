@@ -95,6 +95,15 @@ type Options struct {
 	SortDesc     bool
 }
 
+func (opts Options) InitDefault() *Options {
+	return &Options{
+		DatabasePath: "./index.db",
+		Profiling:    false,
+		Timezone:     3,
+		SortDesc:     true,
+	}
+}
+
 func main() {
 	logger = log.New(os.Stdout, "", log.LstdFlags)
 
@@ -102,12 +111,7 @@ func main() {
 	db := setupDatabase()
 	defer db.Close()
 
-	options := Options{
-		DatabasePath: "./index.db",
-		Profiling:    false,
-		Timezone:     3,
-		SortDesc:     true,
-	}
+	options := new(Options).InitDefault()
 
 	logger.Println("Check Obsidian Todo list")
 
@@ -215,7 +219,7 @@ func setupProfiling() {
 	runtime.SetMutexProfileFraction(5)
 	runtime.SetBlockProfileRate(5)
 	pyroscope.Start(pyroscope.Config{
-		ApplicationName: "explorer.golang.app",
+		ApplicationName: "tagvault.golang.app",
 		ServerAddress:   "http://localhost:4040",
 		Logger:          pyroscope.StandardLogger,
 		Tags:            map[string]string{"hostname": os.Getenv("HOSTNAME")},
@@ -264,7 +268,7 @@ func setupTables(db *sql.DB) {
 }
 
 func setupMainWindow(a fyne.App) fyne.Window {
-	w := a.NewWindow("File Explorer")
+	w := a.NewWindow("Tag Vault")
 	w.Resize(fyne.NewSize(1000, 600))
 
 	icon, err := fyne.LoadResourceFromPath("icon.ico")

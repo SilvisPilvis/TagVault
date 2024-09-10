@@ -1,4 +1,5 @@
-# ![App icon: ](./icon.png) A simple file management app with tags.
+# ![App icon: ](./icon.png) Tag Vault
+## A simple file management app with tags.
 
 ## App Demo Images:
 ### Default app state

@@ -52,12 +52,12 @@ func TestWindowContent(t *testing.T) {
 
 func TestWindowTitle(t *testing.T) {
 	// Check the window title
-	assert.Equal(t, "File Explorer", window.Title(), "Incorrect window title")
+	assert.Equal(t, "Tag Vault", window.Title(), "Incorrect window title")
 }
 
 func setupMainWindowTest(a fyne.App, t *testing.T) fyne.Window {
-	w := a.NewWindow("File Explorer")
-	w.SetTitle("File Explorer")
+	w := a.NewWindow("Tag Vault")
+	w.SetTitle("Tag Vault")
 
 	w.SetContent(container.NewPadded())
 	w.Resize(fyne.NewSize(1000, 600))

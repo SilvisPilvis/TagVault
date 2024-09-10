@@ -50,7 +50,7 @@ func CreateColoredButton(text string, color color.Color, tapped func()) *widget.
 }
 
 func setupMainWindow(a fyne.App) fyne.Window {
-	w := a.NewWindow("File Explorer")
+	w := a.NewWindow("Tag Vault")
 	w.Resize(fyne.NewSize(1000, 600))
 
 	icon, err := fyne.LoadResourceFromPath("icon.ico")
