@@ -26,7 +26,6 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
@@ -67,7 +66,6 @@ var (
 	logger        *log.Logger
 )
 
-// const thumbnailSize = 356
 const thumbnailSize = 256
 
 // type theme struct {
@@ -94,6 +92,7 @@ type Options struct {
 	DatabasePath string
 	Profiling    bool
 	Timezone     int // Timezone like UTC+3 or UTC-3
+	SortDesc     bool
 }
 
 func main() {
@@ -102,6 +101,13 @@ func main() {
 	// setupProfiling()
 	db := setupDatabase()
 	defer db.Close()
+
+	options := Options{
+		DatabasePath: "./index.db",
+		Profiling:    false,
+		Timezone:     3,
+		SortDesc:     true,
+	}
 
 	logger.Println("Check Obsidian Todo list")
 
@@ -162,7 +168,8 @@ func main() {
 		Items: []*widget.FormItem{{Text: "Tag", Widget: input}},
 		OnSubmit: func() {
 			tagName := input.Text
-			imagePaths, err := searchImagesByTag(db, tagName)
+			// imagePaths, err := searchImagesByTag(db, tagName)
+			imagePaths, err := getImagePathsByTag(db, "%"+tagName+"%")
 			if err != nil {
 				fmt.Print("searchImagesByTag")
 				dialog.ShowError(err, w)
@@ -173,13 +180,25 @@ func main() {
 	}
 
 	settingsButton := widget.NewButton("", func() {
-		createSettingsWindow(a, w, db)
+		createSettingsWindow(a, w, db, options)
 	})
 	settingsButton.Icon = theme.SettingsIcon()
 
-	controls := container.NewBorder(nil, nil, nil, settingsButton, form)
-	mainContainer := container.NewBorder(controls, nil, nil, nil, split)
+	loadFilterButton, err := fyne.LoadResourceFromPath("./icons/filter.png")
+	if err != nil {
+		logger.Fatal(err)
+	}
+	filterButton := widget.NewButton("", func() {
+		// sidebarScroll.Show()
+		return
+	})
+	filterButton.Icon = loadFilterButton
 
+	optContainer := container.NewHBox(filterButton, settingsButton)
+
+	// controls := container.NewBorder(nil, nil, nil, settingsButton, form)
+	controls := container.NewBorder(nil, nil, nil, optContainer, form)
+	mainContainer := container.NewBorder(controls, nil, nil, nil, split)
 	displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, content)
 	// displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, mainContainer)
 
@@ -235,6 +254,7 @@ func setupTables(db *sql.DB) {
 		"CREATE TABLE IF NOT EXISTS `Tag`(`id` INTEGER PRIMARY KEY NOT NULL, `name` VARCHAR(255) NOT NULL, `color` VARCHAR(7) NOT NULL);",
 		"CREATE TABLE IF NOT EXISTS `Image`(`id` INTEGER PRIMARY KEY NOT NULL, `path` VARCHAR(1024) NOT NULL, `dateAdded` DATETIME NOT NULL);",
 		"CREATE TABLE IF NOT EXISTS `ImageTag`(`imageId` INTEGER NOT NULL, `tagId` INTEGER NOT NULL);",
+		"CREATE TABLE IF NOT EXISTS `Options`(`dbPath` VARCHAR(255) NOT NULL, `timezone` VARCHAR(1024) NOT NULL, `sortDesc` BOOLEAN);",
 	}
 	for _, table := range tables {
 		if _, err := db.Exec(table); err != nil {
@@ -442,7 +462,7 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 	label := widget.NewLabel(truncatedName)
 
 	// make a parent container to hold the image button and label
-	imageTile := container.New(layout.NewVBoxLayout(), imgButton, label)
+	imageTile := container.NewVBox(container.NewPadded(imgButton), label)
 	imageContainer.Add(imageTile)
 }
 
@@ -481,7 +501,7 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	sidebar.Add(fullLabel)
 	sidebar.Add(dateAdded)
 	sidebar.Add(tagDisplay)
-	sidebar.Add(container.NewGridWithColumns(2, addTagButton, createTagButton))
+	sidebar.Add(container.NewPadded(container.NewGridWithColumns(2, addTagButton, createTagButton)))
 
 	sidebarScroll.Show()
 	imageContainer.Refresh()
@@ -740,6 +760,43 @@ func loadImageResourceEfficient(path string) (fyne.Resource, error) {
 	return resource, nil
 }
 
+func getImagePathsByTag(db *sql.DB, tagName string) ([]string, error) {
+	query := `
+        SELECT DISTINCT Image.path
+        FROM Image
+        JOIN ImageTag ON Image.id = ImageTag.imageId
+        JOIN Tag ON ImageTag.tagId = Tag.id
+        WHERE Tag.name LIKE ?
+    `
+
+	stmt, err := db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(tagName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var paths []string
+	for rows.Next() {
+		var path string
+		if err := rows.Scan(&path); err != nil {
+			return nil, err
+		}
+		paths = append(paths, path)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return paths, nil
+}
+
 // Function to handle tag-based search
 func searchImagesByTag(db *sql.DB, tagName string) ([]string, error) {
 	query := `
@@ -747,9 +804,10 @@ func searchImagesByTag(db *sql.DB, tagName string) ([]string, error) {
 		FROM Image
 		JOIN ImageTag ON Image.id = ImageTag.imageId
 		JOIN Tag ON ImageTag.tagId = Tag.id
-		WHERE Tag.name = ?
+		WHERE Tag.name LIKE ?
 	`
 	rows, err := db.Query(query, tagName)
+	// rows, err := db.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -852,12 +910,12 @@ func colorFromHex(hex string) (color.Color, error) {
 }
 
 // Add a settings window
-func createSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
+func createSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB, options Options) {
 	settingsWindow := a.NewWindow("Settings")
 
 	// Create a form for database path
 	dbPathEntry := widget.NewEntry()
-	dbPathEntry.SetText("./index.db") // Set current path
+	dbPathEntry.SetText(options.DatabasePath) // Set current path
 
 	dbPathForm := &widget.Form{
 		Items: []*widget.FormItem{
@@ -889,12 +947,20 @@ func createSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 		},
 	)
 
+	timeZone := widget.NewLabel("Timezone in UTC: UTC" + strconv.Itoa(options.Timezone))
+	if options.Timezone > 0 {
+		timeZone = widget.NewLabel("Timezone in UTC: UTC+" + strconv.Itoa(options.Timezone))
+	} else {
+		timeZone = widget.NewLabel("Timezone in UTC: UTC" + strconv.Itoa(options.Timezone))
+	}
+
 	// Create a container for the settings content
 	content := container.NewVBox(
 		dbPathForm,
 		widget.NewLabel("Tags"),
 		tagList,
-		widget.NewLabel("Timezone in UTC: UTC+3"),
+		timeZone,
+		widget.NewLabel("Default sorting: Date Added, Descending"),
 	)
 
 	settingsWindow.SetContent(content)
