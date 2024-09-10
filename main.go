@@ -9,7 +9,7 @@ import (
 	"math"
 
 	// "image/draw"
-	// "errors"
+	"errors"
 	"image/jpeg"
 	"image/png"
 	"log"
@@ -59,16 +59,6 @@ func (b *imageButton) Tapped(*fyne.PointEvent) {
 	}
 }
 
-var (
-	imageTypes = map[string]struct{}{
-		".jpg": {}, ".png": {}, ".jpeg": {}, ".gif": {}, ".bmp": {}, ".ico": {},
-	}
-	resourceCache sync.Map
-	logger        *log.Logger
-)
-
-const thumbnailSize = 256
-
 // type theme struct {
 // Color color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xFF},
 // PrimaryColor: color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xFF},
@@ -107,14 +97,23 @@ func (opts Options) InitDefault() *Options {
 	}
 }
 
+var (
+	imageTypes = map[string]struct{}{
+		".jpg": {}, ".png": {}, ".jpeg": {}, ".gif": {}, ".bmp": {}, ".ico": {},
+	}
+	resourceCache sync.Map
+	logger        *log.Logger
+	options       = new(Options).InitDefault()
+)
+
+const thumbnailSize = 256
+
 func main() {
 	logger = log.New(os.Stdout, "", log.LstdFlags)
 
 	// setupProfiling()
 	db := setupDatabase()
 	defer db.Close()
-
-	options := new(Options).InitDefault()
 
 	logger.Println("Check Obsidian Todo list")
 
@@ -187,7 +186,7 @@ func main() {
 	}
 
 	settingsButton := widget.NewButton("", func() {
-		createSettingsWindow(a, w, db, options)
+		createSettingsWindow(a, w, db)
 	})
 	settingsButton.Icon = theme.SettingsIcon()
 
@@ -608,13 +607,22 @@ func createTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 	tagWindow := a.NewWindow("Create Tag")
 	tagWindow.SetTitle("Create a Tag")
 
+	r, g, b := widget.NewSlider(0, 255), widget.NewSlider(0, 255), widget.NewSlider(0, 255)
+	switch options.UseRGB {
+	case true:
+		r = widget.NewSlider(0, 255)
+		g = widget.NewSlider(0, 255)
+		b = widget.NewSlider(0, 255)
+	case false:
+		break
+	default:
+		dialog.ShowError(errors.New("Tag color mode not set in options"), tagWindow)
+	}
+
 	colorPreviewRect := canvas.NewRectangle(color.NRGBA{0, 0, 130, 0})
 	colorPreviewRect.SetMinSize(fyne.NewSize(64, 128))
 	colorPreviewRect.CornerRadius = 5
 
-	// r := widget.NewSlider(0, 255)
-	// g := widget.NewSlider(0, 255)
-	// b := widget.NewSlider(0, 255)
 	h := widget.NewSlider(0, 359)
 	s := widget.NewSlider(0, 1)
 	v := widget.NewSlider(0, 1)
@@ -636,7 +644,6 @@ func createTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 		}
 		colorPreviewRect.FillColor = color
 	}
-
 	s.OnChanged = func(value float64) {
 		h, s, v := h.Value, s.Value, v.Value
 		hex := HSVToHex(h, s, v)
@@ -647,7 +654,6 @@ func createTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 		}
 		colorPreviewRect.FillColor = color
 	}
-
 	v.OnChanged = func(value float64) {
 		h, s, v := h.Value, s.Value, v.Value
 		hex := HSVToHex(h, s, v)
@@ -659,6 +665,19 @@ func createTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 		colorPreviewRect.FillColor = color
 	}
 
+	r.OnChanged = func(value float64) {
+		r, g, b := r.Value, g.Value, b.Value
+		colorPreviewRect.FillColor = color.NRGBA{uint8(r), uint8(g), uint8(b), 255}
+	}
+	g.OnChanged = func(value float64) {
+		r, g, b := r.Value, g.Value, b.Value
+		colorPreviewRect.FillColor = color.NRGBA{uint8(r), uint8(g), uint8(b), 255}
+	}
+	b.OnChanged = func(value float64) {
+		r, g, b := r.Value, g.Value, b.Value
+		colorPreviewRect.FillColor = color.NRGBA{uint8(r), uint8(g), uint8(b), 255}
+	}
+
 	stringInput := widget.NewEntry()
 	stringInput.SetPlaceHolder("Enter Tag name")
 
@@ -668,30 +687,60 @@ func createTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 			dialog.ShowInformation("Error", "Tag name cannot be empty", tagWindow)
 			return
 		}
-		hexColor := HSVToHex(h.Value, s.Value, v.Value)
-		_, err := db.Exec("INSERT INTO Tag (name, color) VALUES (?, ?)", tagName, hexColor)
-		if err != nil {
-			fmt.Print("createTagWindow")
-			dialog.ShowError(err, tagWindow)
-			return
+		if !options.UseRGB {
+			hexColor := HSVToHex(h.Value, s.Value, v.Value)
+			_, err := db.Exec("INSERT INTO Tag (name, color) VALUES (?, ?)", tagName, hexColor)
+			if err != nil {
+				fmt.Print("createTagWindow")
+				dialog.ShowError(err, tagWindow)
+				return
+			}
+			dialog.ShowInformation("Tag Created", "Tag Name: "+tagName+"\nColor: "+hexColor, tagWindow)
+		} else {
+			hexColor := fmt.Sprintf("#%02X%02X%02X", int(r.Value), int(g.Value), int(b.Value))
+			_, err := db.Exec("INSERT INTO Tag (name, color) VALUES (?, ?)", tagName, hexColor)
+			if err != nil {
+				fmt.Print("createTagWindow")
+				dialog.ShowError(err, tagWindow)
+				return
+			}
+			dialog.ShowInformation("Tag Created", "Tag Name: "+tagName+"\nColor: "+string(hexColor), tagWindow)
 		}
-		dialog.ShowInformation("Tag Created", "Tag Name: "+tagName+"\nColor: "+hexColor, tagWindow)
 		tagWindow.Close()
 	})
 
-	content := container.NewVBox(
-		widget.NewLabel("Color preview:"),
-		colorPreviewRect,
-		widget.NewLabel("Hue:"),
-		h,
-		widget.NewLabel("Saturation:"),
-		s,
-		widget.NewLabel("Value:"),
-		v,
-		widget.NewLabel("Enter tag name:"),
-		stringInput,
-		createButton,
-	)
+	content := container.NewVBox()
+	// if not rgb show HSV
+	if !options.UseRGB {
+		content = container.NewVBox(
+			widget.NewLabel("Color preview:"),
+			colorPreviewRect,
+			widget.NewLabel("Hue:"),
+			h,
+			widget.NewLabel("Saturation:"),
+			s,
+			widget.NewLabel("Value:"),
+			v,
+			widget.NewLabel("Enter tag name:"),
+			stringInput,
+			createButton,
+		)
+	} else {
+		// else show RGB
+		content = container.NewVBox(
+			widget.NewLabel("Color preview:"),
+			colorPreviewRect,
+			widget.NewLabel("Red:"),
+			r,
+			widget.NewLabel("Green:"),
+			g,
+			widget.NewLabel("Blue:"),
+			b,
+			widget.NewLabel("Enter tag name:"),
+			stringInput,
+			createButton,
+		)
+	}
 
 	tagWindow.SetContent(content)
 	tagWindow.Resize(fyne.NewSize(300, 200))
@@ -996,7 +1045,7 @@ func colorFromHex(hex string) (color.Color, error) {
 }
 
 // Add a settings window
-func createSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB, options *Options) {
+func createSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 	settingsWindow := a.NewWindow("Settings")
 
 	// Create a form for database path
