@@ -94,6 +94,7 @@ type Options struct {
 	Profiling    bool
 	Timezone     int // Timezone like UTC+3 or UTC-3
 	SortDesc     bool
+	UseRGB       bool
 }
 
 func (opts Options) InitDefault() *Options {
@@ -102,6 +103,7 @@ func (opts Options) InitDefault() *Options {
 		Profiling:    false,
 		Timezone:     3,
 		SortDesc:     true,
+		UseRGB:       false,
 	}
 }
 
@@ -497,7 +499,7 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 		showTagWindow(a, w, db, imageId, tagDisplay)
 	})
 
-	createTagButton := widget.NewButton("Add Tag", func() {
+	createTagButton := widget.NewButton("Create Tag", func() {
 		createTagWindow(a, w, db)
 	})
 
@@ -606,10 +608,9 @@ func createTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 	tagWindow := a.NewWindow("Create Tag")
 	tagWindow.SetTitle("Create a Tag")
 
-	var chosenColor color.Color = color.White
-
-	colorPreviewRect := canvas.NewRectangle(color.White)
-	colorPreviewRect.SetMinSize(fyne.NewSize(50, 50))
+	colorPreviewRect := canvas.NewRectangle(color.NRGBA{0, 0, 130, 0})
+	colorPreviewRect.SetMinSize(fyne.NewSize(64, 128))
+	colorPreviewRect.CornerRadius = 5
 
 	// r := widget.NewSlider(0, 255)
 	// g := widget.NewSlider(0, 255)
@@ -620,24 +621,46 @@ func createTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 	// this should be some blue color
 	h.Value = 200
 	h.Step = 1
-	s.Value = 0
+	s.Value = 0.5
 	s.Step = 0.1
 	v.Value = 100
 	v.Step = 0.1
 
-	colorButton := widget.NewButton("Choose Tag Color", nil)
+	h.OnChanged = func(value float64) {
+		h, s, v := h.Value, s.Value, v.Value
+		hex := HSVToHex(h, s, v)
+		color, err := colorFromHex(hex)
+		if err != nil {
+			dialog.ShowError(err, tagWindow)
+			return
+		}
+		colorPreviewRect.FillColor = color
+	}
+
+	s.OnChanged = func(value float64) {
+		h, s, v := h.Value, s.Value, v.Value
+		hex := HSVToHex(h, s, v)
+		color, err := colorFromHex(hex)
+		if err != nil {
+			dialog.ShowError(err, tagWindow)
+			return
+		}
+		colorPreviewRect.FillColor = color
+	}
+
+	v.OnChanged = func(value float64) {
+		h, s, v := h.Value, s.Value, v.Value
+		hex := HSVToHex(h, s, v)
+		color, err := colorFromHex(hex)
+		if err != nil {
+			dialog.ShowError(err, tagWindow)
+			return
+		}
+		colorPreviewRect.FillColor = color
+	}
+
 	stringInput := widget.NewEntry()
 	stringInput.SetPlaceHolder("Enter Tag name")
-
-	updateColorButton := func(c color.Color) {
-		chosenColor = c
-		r, g, b, _ := c.RGBA()
-		colorButton.SetText(fmt.Sprintf("Color: #%02X%02X%02X", uint8(r>>8), uint8(g>>8), uint8(b>>8)))
-	}
-
-	colorButton.OnTapped = func() {
-		dialog.ShowColorPicker("Choose Tag Color", "Select a color for your tag", updateColorButton, tagWindow)
-	}
 
 	createButton := widget.NewButton("Create Tag", func() {
 		tagName := stringInput.Text
@@ -645,8 +668,7 @@ func createTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 			dialog.ShowInformation("Error", "Tag name cannot be empty", tagWindow)
 			return
 		}
-		r, g, b, _ := chosenColor.RGBA()
-		hexColor := fmt.Sprintf("#%02X%02X%02X", uint8(r>>8), uint8(g>>8), uint8(b>>8))
+		hexColor := HSVToHex(h.Value, s.Value, v.Value)
 		_, err := db.Exec("INSERT INTO Tag (name, color) VALUES (?, ?)", tagName, hexColor)
 		if err != nil {
 			fmt.Print("createTagWindow")
@@ -654,12 +676,18 @@ func createTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 			return
 		}
 		dialog.ShowInformation("Tag Created", "Tag Name: "+tagName+"\nColor: "+hexColor, tagWindow)
-		// tagWindow.Close()
+		tagWindow.Close()
 	})
 
 	content := container.NewVBox(
-		widget.NewLabel("Choose tag color:"),
-		colorButton,
+		widget.NewLabel("Color preview:"),
+		colorPreviewRect,
+		widget.NewLabel("Hue:"),
+		h,
+		widget.NewLabel("Saturation:"),
+		s,
+		widget.NewLabel("Value:"),
+		v,
 		widget.NewLabel("Enter tag name:"),
 		stringInput,
 		createButton,
