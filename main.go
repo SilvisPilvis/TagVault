@@ -59,15 +59,18 @@ func (b *imageButton) Tapped(*fyne.PointEvent) {
 	}
 }
 
+// make a new theme called defaultTheme
 type defaultTheme struct{}
 
-// the custom default theme
+// the new defaultTheme colors
 func (defaultTheme) Color(c fyne.ThemeColorName, v fyne.ThemeVariant) color.Color {
 	switch c {
 	case theme.ColorNameBackground:
-		return color.NRGBA{R: 0x30, G: 0x30, B: 0x30, A: 0xff}
+		return color.NRGBA{R: 0x04, G: 0x10, B: 0x11, A: 0xff}
+	// case theme.ColorNameButton:
+	// 	return color.Alpha16{R: 0x95, G: 0xdd, B: 0xe9, A: 0xff}
 	case theme.ColorNameButton:
-		return color.Alpha16{A: 0x0}
+		return color.NRGBA{R: 0x9e, G: 0xbd, B: 0xff, A: 0xff}
 	case theme.ColorNameDisabledButton:
 		return color.NRGBA{R: 0x26, G: 0x26, B: 0x26, A: 0xff}
 	case theme.ColorNameDisabled:
@@ -75,21 +78,21 @@ func (defaultTheme) Color(c fyne.ThemeColorName, v fyne.ThemeVariant) color.Colo
 	case theme.ColorNameError:
 		return color.NRGBA{R: 0xf4, G: 0x43, B: 0x36, A: 0xff}
 	case theme.ColorNameFocus:
-		return color.NRGBA{R: 0x21, G: 0x96, B: 0xf3, A: 0x7f}
+		return color.NRGBA{R: 0xa7, G: 0x2c, B: 0xd4, A: 0x7f}
 	case theme.ColorNameForeground:
-		return color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
+		return color.NRGBA{R: 0xe6, G: 0xf7, B: 0xfa, A: 0xff}
 	case theme.ColorNameHover:
 		return color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xf}
 	case theme.ColorNameInputBackground:
 		return color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0x19}
 	case theme.ColorNamePlaceHolder:
-		return color.NRGBA{R: 0xb2, G: 0xb2, B: 0xb2, A: 0xff}
+		return color.NRGBA{R: 0xe6, G: 0xf7, B: 0xfa, A: 0xff}
 	case theme.ColorNamePressed:
 		return color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0x66}
 	case theme.ColorNamePrimary:
-		return color.NRGBA{R: 0x21, G: 0x96, B: 0xf3, A: 0xff}
+		return color.NRGBA{R: 0x95, G: 0xdd, B: 0xe9, A: 0xff}
 	case theme.ColorNameScrollBar:
-		return color.NRGBA{R: 0x0, G: 0x0, B: 0x0, A: 0x99}
+		return color.NRGBA{R: 0x3f, G: 0x1d, B: 0x8b, A: 0xff}
 	case theme.ColorNameShadow:
 		return color.NRGBA{R: 0x0, G: 0x0, B: 0x0, A: 0x66}
 	default:
@@ -97,6 +100,7 @@ func (defaultTheme) Color(c fyne.ThemeColorName, v fyne.ThemeVariant) color.Colo
 	}
 }
 
+// the new defaultTheme fonts
 func (defaultTheme) Font(s fyne.TextStyle) fyne.Resource {
 	if s.Monospace {
 		return theme.DefaultTheme().Font(s)
@@ -113,10 +117,12 @@ func (defaultTheme) Font(s fyne.TextStyle) fyne.Resource {
 	return theme.DefaultTheme().Font(s)
 }
 
+// the new defaultTheme icons
 func (defaultTheme) Icon(n fyne.ThemeIconName) fyne.Resource {
 	return theme.DefaultTheme().Icon(n)
 }
 
+// the new defaultTheme font size
 func (defaultTheme) Size(s fyne.ThemeSizeName) float32 {
 	switch s {
 	case theme.SizeNameCaptionText:
@@ -140,26 +146,6 @@ func (defaultTheme) Size(s fyne.ThemeSizeName) float32 {
 	}
 }
 
-// type theme struct {
-// Color color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xFF},
-// PrimaryColor: color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xFF},
-// TextColor: color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xFF},
-// Font:    theme.DefaultFont,
-// ColorNameBackground theme.ColorNameBackground
-// ColorNameForeground theme.ColorNameForeground
-// }
-
-// func (m theme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
-// 	if name == theme.ColorNameBackground {
-// 		if variant == theme.VariantLight {
-// 			return color.White
-// 		}
-// 		return color.Black
-// 	}
-
-// 	return theme.DefaultTheme().Color(name, variant)
-// }
-
 type Options struct {
 	DatabasePath string
 	Profiling    bool
@@ -179,6 +165,18 @@ func (opts Options) InitDefault() *Options {
 		ExifFields:   []string{"DateTime"},
 	}
 }
+
+// type CustomTheme struct {
+// 	fyne.Theme
+// }
+
+// func (c *CustomTheme) NewCustomTheme() fyne.Theme {
+// 	return &CustomTheme{}
+// }
+
+// func (c *CustomTheme) Color(n fyne.ThemeColorName, v fyne.ThemeVariant) color.Color {
+// 	return theme.DefaultTheme().Color(n, v)
+// }
 
 var (
 	imageTypes = map[string]struct{}{
@@ -267,7 +265,7 @@ func main() {
 	}
 
 	settingsButton := widget.NewButton("", func() {
-		createSettingsWindow(a, w, db)
+		showSettingsWindow(a, w, db)
 	})
 	settingsButton.Icon = theme.SettingsIcon()
 
@@ -560,8 +558,6 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 
 // UNDER NO CIRCUMSTANCES CHANGE THE ORDER IN displayImage func OR THERE WILL BE ERRORS WHEN FYNE IS LOADING IMAGES
 func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resource, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App, imageContainer *fyne.Container) {
-	logger.Println("Update sidebar called")
-
 	// clear sidebar
 	sidebar.RemoveAll()
 
@@ -571,7 +567,8 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	fullImg.SetMinSize(fyne.NewSize(200, 200))
 	paddedImg := container.NewPadded(fullImg)
 
-	fullLabel := widget.NewLabel(filepath.Base(path))
+	// fullLabel := widget.NewLabel(filepath.Base(path))
+	fullLabel := widget.NewLabel(truncateFilename(filepath.Base(path), 10))
 	fullLabel.Wrapping = fyne.TextWrapWord
 
 	dateAdded := widget.NewLabel("Date Added: " + getDate(db, path))
@@ -585,13 +582,14 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	})
 
 	createTagButton := widget.NewButton("Create Tag", func() {
-		createTagWindow(a, w, db)
+		showCreateTagWindow(a, w, db)
 	})
 
 	// sidebar.Add(fullImg)
 	sidebar.Add(paddedImg)
-	sidebar.Add(fullLabel)
-	sidebar.Add(dateAdded)
+	// sidebar.Add(fullLabel)
+	// sidebar.Add(dateAdded)
+	sidebar.Add(container.NewGridWithRows(2, dateAdded, fullLabel))
 	sidebar.Add(tagDisplay)
 	sidebar.Add(container.NewPadded(container.NewGridWithColumns(2, addTagButton, createTagButton)))
 
@@ -690,7 +688,7 @@ func showTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int, tagLis
 	}()
 }
 
-// func createTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
+// func showCreateTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 // 	tagWindow := a.NewWindow("Create Tag")
 // 	tagWindow.SetTitle("Create a Tag")
 
@@ -778,7 +776,7 @@ func showTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int, tagLis
 // 			hexColor := HSVToHex(h.Value, s.Value, v.Value)
 // 			_, err := db.Exec("INSERT INTO Tag (name, color) VALUES (?, ?)", tagName, hexColor)
 // 			if err != nil {
-// 				fmt.Print("createTagWindow")
+// 				fmt.Print("showCreateTagWindow")
 // 				dialog.ShowError(err, tagWindow)
 // 				return
 // 			}
@@ -787,7 +785,7 @@ func showTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int, tagLis
 // 			hexColor := fmt.Sprintf("#%02X%02X%02X", int(r.Value), int(g.Value), int(b.Value))
 // 			_, err := db.Exec("INSERT INTO Tag (name, color) VALUES (?, ?)", tagName, hexColor)
 // 			if err != nil {
-// 				fmt.Print("createTagWindow")
+// 				fmt.Print("showCreateTagWindow")
 // 				dialog.ShowError(err, tagWindow)
 // 				return
 // 			}
@@ -834,7 +832,7 @@ func showTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int, tagLis
 // 	tagWindow.Show()
 // }
 
-func createTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
+func showCreateTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 	tagWindow := a.NewWindow("Create Tag")
 	tagWindow.SetTitle("Create a Tag")
 
@@ -905,7 +903,7 @@ func createTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 
 		_, err := db.Exec("INSERT INTO Tag (name, color) VALUES (?, ?)", tagName, hexColor)
 		if err != nil {
-			dialog.ShowError(fmt.Errorf("createTagWindow: %w", err), tagWindow)
+			dialog.ShowError(fmt.Errorf("showCreateTagWindow: %w", err), tagWindow)
 			return
 		}
 
@@ -1175,7 +1173,7 @@ func removeTagFromImage(db *sql.DB, imageId int, tagId int) error {
 
 // Modify the createTagDisplay function to include tag removal functionality
 func createTagDisplay(db *sql.DB, imageId int) *fyne.Container {
-	tagDisplay := container.NewAdaptiveGrid(4)
+	tagDisplay := container.NewAdaptiveGrid(3)
 
 	rows, err := db.Query("SELECT Tag.id, Tag.name, Tag.color FROM ImageTag INNER JOIN Tag ON ImageTag.tagId = Tag.id WHERE ImageTag.imageId = ?", imageId)
 	if err != nil {
@@ -1271,7 +1269,7 @@ func HexToColor(hex string) (color.Color, error) {
 }
 
 // Add a settings window
-func createSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
+func showSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 	settingsWindow := a.NewWindow("Settings")
 
 	// Create a form for database path
@@ -1315,16 +1313,151 @@ func createSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 		timeZone = widget.NewLabel("Timezone in UTC: UTC" + strconv.Itoa(options.Timezone))
 	}
 
+	// Create a button to open the theme editor
+	themeEditorButton := widget.NewButton("Theme Editor", func() {
+		createThemeEditorWindow(a, defaultTheme{})
+	})
+
 	// Create a container for the settings content
 	content := container.NewVBox(
 		dbPathForm,
 		widget.NewLabel("Tags"),
 		tagList,
 		timeZone,
+		themeEditorButton,
 		widget.NewLabel("Default sorting: Date Added, Descending"),
 	)
 
 	settingsWindow.SetContent(content)
 	settingsWindow.Resize(fyne.NewSize(400, 300))
 	settingsWindow.Show()
+}
+
+func createThemeEditorWindow(app fyne.App, currentTheme fyne.Theme) {
+	window := app.NewWindow("Theme Editor")
+
+	colorProperties := []string{
+		"BackgroundColor",
+		"ButtonColor",
+		"DisabledButtonColor",
+		"TextColor",
+		"DisabledTextColor",
+		"IconColor",
+		"DisabledIconColor",
+		"PlaceHolderColor",
+		"PrimaryColor",
+		"HoverColor",
+		"FocusColor",
+		"ScrollBarColor",
+		"ShadowColor",
+		"ErrorColor",
+	}
+
+	content := container.NewVBox()
+
+	for _, prop := range colorProperties {
+		colorValue := getThemeColor(currentTheme, prop)
+		colorPreview := canvas.NewRectangle(colorValue)
+		colorPreview.SetMinSize(fyne.NewSize(30, 30))
+
+		rgbaEntries := [4]*widget.Entry{}
+		for i, _ := range []string{"R", "G", "B", "A"} {
+			rgbaEntries[i] = widget.NewEntry()
+			rgbaEntries[i].SetText(getColorComponentString(colorValue, i))
+			rgbaEntries[i].OnChanged = func(_ string) {
+				newColor := color.NRGBA{
+					parseColorComponent(rgbaEntries[0].Text),
+					parseColorComponent(rgbaEntries[1].Text),
+					parseColorComponent(rgbaEntries[2].Text),
+					parseColorComponent(rgbaEntries[3].Text),
+				}
+				colorPreview.FillColor = newColor
+				colorPreview.Refresh()
+				// setThemeColor(currentTheme, prop, newColor)
+			}
+		}
+
+		row := container.NewHBox(
+			widget.NewLabel(prop),
+			colorPreview,
+			rgbaEntries[0],
+			rgbaEntries[1],
+			rgbaEntries[2],
+			rgbaEntries[3],
+		)
+		content.Add(row)
+	}
+
+	applyButton := widget.NewButton("Apply Theme", func() {
+		app.Settings().SetTheme(currentTheme)
+	})
+	content.Add(applyButton)
+
+	window.SetContent(container.NewVScroll(content))
+	window.Resize(fyne.NewSize(600, 400))
+	window.Show()
+}
+
+func getThemeColor(t fyne.Theme, prop string) color.Color {
+	switch prop {
+	case "BackgroundColor":
+		return t.Color("background", theme.VariantDark)
+	case "ButtonColor":
+		return t.Color("button", theme.VariantDark)
+	case "DisabledButtonColor":
+		return t.Color("disabledButton", theme.VariantDark)
+	case "TextColor":
+		return t.Color("foreground", theme.VariantDark)
+	case "DisabledTextColor":
+		return t.Color("disabledForeground", theme.VariantDark)
+	case "IconColor":
+		return t.Color("icon", theme.VariantDark)
+	case "DisabledIconColor":
+		return t.Color("disabledIcon", theme.VariantDark)
+	case "PlaceHolderColor":
+		return t.Color("placeholder", theme.VariantDark)
+	case "PrimaryColor":
+		return t.Color("primary", theme.VariantDark)
+	case "HoverColor":
+		return t.Color("hover", theme.VariantDark)
+	case "FocusColor":
+		return t.Color("focus", theme.VariantDark)
+	case "ScrollBarColor":
+		return t.Color("scrollBar", theme.VariantDark)
+	case "ShadowColor":
+		return t.Color("shadow", theme.VariantDark)
+	case "ErrorColor":
+		return t.Color("error", theme.VariantDark)
+	default:
+		return color.White
+	}
+}
+
+func setThemeColor(t fyne.Theme, prop string, c color.Color) {
+	// This function would need to be implemented based on your theme implementation.
+	// It should set the color for the given property in the theme.
+}
+
+func getColorComponentString(c color.Color, component int) string {
+	r, g, b, a := c.RGBA()
+	switch component {
+	case 0:
+		return fmt.Sprintf("%d", uint8(r>>8))
+	case 1:
+		return fmt.Sprintf("%d", uint8(g>>8))
+	case 2:
+		return fmt.Sprintf("%d", uint8(b>>8))
+	case 3:
+		return fmt.Sprintf("%d", uint8(a>>8))
+	default:
+		return "0"
+	}
+}
+
+func parseColorComponent(s string) uint8 {
+	v, err := strconv.ParseUint(s, 10, 8)
+	if err != nil {
+		return 0
+	}
+	return uint8(v)
 }
