@@ -197,6 +197,7 @@ func main() {
 	defer db.Close()
 
 	logger.Println("Check Obsidian Todo list")
+	logger.Println("Replace search form with a search bar (input only)")
 
 	// logger.Println("Minimize widget updates:
 	// Fyne's object tree walking is often triggered by widget updates. Try to reduce unnecessary updates by:
@@ -279,7 +280,8 @@ func main() {
 	})
 	filterButton.Icon = loadFilterButton
 
-	optContainer := container.NewHBox(filterButton, settingsButton)
+	optContainer := container.NewAdaptiveGrid(2, filterButton, settingsButton)
+	// tempContainer := container.NewVBox(optContainer, form)
 
 	// controls := container.NewBorder(nil, nil, nil, settingsButton, form)
 	controls := container.NewBorder(nil, nil, nil, optContainer, form)
@@ -1358,7 +1360,8 @@ func createThemeEditorWindow(app fyne.App, currentTheme fyne.Theme) {
 	for _, prop := range colorProperties {
 		colorValue := getThemeColor(currentTheme, prop)
 		colorPreview := canvas.NewRectangle(colorValue)
-		colorPreview.SetMinSize(fyne.NewSize(30, 30))
+		colorPreview.CornerRadius = 5
+		colorPreview.SetMinSize(fyne.NewSize(35, 30))
 
 		rgbaEntries := [4]*widget.Entry{}
 		for i, _ := range []string{"R", "G", "B", "A"} {
@@ -1380,9 +1383,13 @@ func createThemeEditorWindow(app fyne.App, currentTheme fyne.Theme) {
 		row := container.NewHBox(
 			widget.NewLabel(prop),
 			colorPreview,
+			widget.NewLabel("R: "),
 			rgbaEntries[0],
+			widget.NewLabel("G: "),
 			rgbaEntries[1],
+			widget.NewLabel("B: "),
 			rgbaEntries[2],
+			widget.NewLabel("A: "),
 			rgbaEntries[3],
 		)
 		content.Add(row)
