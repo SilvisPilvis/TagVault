@@ -298,7 +298,7 @@ func main() {
 	// controls := container.NewBorder(nil, nil, nil, settingsButton, form)
 	controls := container.NewBorder(nil, nil, nil, optContainer, form)
 	// controls := container.NewBorder(nil, nil, nil, optContainer)
-	mainContainer := container.NewBorder(controls, nil, nil, nil, split)
+	mainContainer := container.NewBorder(controls, nil, nil, nil, container.NewPadded(split))
 	displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, content)
 	// displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, mainContainer)
 
@@ -1341,6 +1341,9 @@ func showSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 		timeZone,
 		themeEditorButton,
 		widget.NewLabel("Default sorting: Date Added, Descending"),
+		widget.NewButton("Test", func() {
+			showColorPickerDialog(settingsWindow)
+		}),
 	)
 
 	settingsWindow.SetContent(content)
@@ -1480,4 +1483,35 @@ func parseColorComponent(s string) uint8 {
 		return 0
 	}
 	return uint8(v)
+}
+
+func showColorPickerWindow(window fyne.Window) {
+	dialogContent := container.NewVBox()
+	previewRect := canvas.NewRectangle(color.White)
+	previewRect.Resize(fyne.NewSize(35, 30))
+	bgRect := canvas.NewRectangle(color.Black)
+	r, g, b := widget.NewSlider(0, 255), widget.NewSlider(0, 255), widget.NewSlider(0, 255)
+	r.Step = 1
+	g.Step = 1
+	b.Step = 1
+	h, s, v := widget.NewSlider(0, 359), widget.NewSlider(0, 1), widget.NewSlider(0, 1)
+	s.Step = 0.01
+	v.Step = 0.01
+	dialogContent.Add(widget.NewLabel("Pick a color:"))
+	if options.UseRGB {
+		dialogContent.Add(widget.NewLabel("Red:"))
+		dialogContent.Add(r)
+		dialogContent.Add(widget.NewLabel("Green:"))
+		dialogContent.Add(g)
+		dialogContent.Add(widget.NewLabel("Blue:"))
+		dialogContent.Add(b)
+	} else {
+		dialogContent.Add(widget.NewLabel("Hue:"))
+		dialogContent.Add(h)
+		dialogContent.Add(widget.NewLabel("Saturation:"))
+		dialogContent.Add(s)
+		dialogContent.Add(widget.NewLabel("Value:"))
+		dialogContent.Add(v)
+	}
+	dialog.NewCustom("Color Picker", "OK", container.NewStack(dialogContent, bgRect), window).Show()
 }
