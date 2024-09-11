@@ -197,7 +197,6 @@ func main() {
 	defer db.Close()
 
 	logger.Println("Check Obsidian Todo list")
-	logger.Println("Replace search form with a search bar (input only)")
 
 	// logger.Println("Minimize widget updates:
 	// Fyne's object tree walking is often triggered by widget updates. Try to reduce unnecessary updates by:
@@ -1330,7 +1329,7 @@ func showSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 
 	// Create a button to open the theme editor
 	themeEditorButton := widget.NewButton("Theme Editor", func() {
-		createThemeEditorWindow(a, defaultTheme{})
+		showThemeEditorWindow(a, defaultTheme{})
 	})
 
 	// Create a container for the settings content
@@ -1341,9 +1340,6 @@ func showSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 		timeZone,
 		themeEditorButton,
 		widget.NewLabel("Default sorting: Date Added, Descending"),
-		widget.NewButton("Test", func() {
-			showColorPickerDialog(settingsWindow)
-		}),
 	)
 
 	settingsWindow.SetContent(content)
@@ -1351,9 +1347,9 @@ func showSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 	settingsWindow.Show()
 }
 
-func createThemeEditorWindow(app fyne.App, currentTheme fyne.Theme) {
+func showThemeEditorWindow(app fyne.App, currentTheme fyne.Theme) {
 	window := app.NewWindow("Theme Editor")
-
+	window.SetTitle("Theme Editor")
 	colorProperties := []string{
 		"BackgroundColor",
 		"ButtonColor",
@@ -1370,8 +1366,10 @@ func createThemeEditorWindow(app fyne.App, currentTheme fyne.Theme) {
 		"ShadowColor",
 		"ErrorColor",
 	}
-
 	content := container.NewVBox()
+
+	// Create a map to store color previews
+	colorPreviews := make(map[string]*canvas.Rectangle)
 
 	for _, prop := range colorProperties {
 		colorValue := getThemeColor(currentTheme, prop)
@@ -1379,40 +1377,25 @@ func createThemeEditorWindow(app fyne.App, currentTheme fyne.Theme) {
 		colorPreview.CornerRadius = 5
 		colorPreview.SetMinSize(fyne.NewSize(35, 30))
 
-		rgbaEntries := [4]*widget.Entry{}
-		for i, _ := range []string{"R", "G", "B", "A"} {
-			rgbaEntries[i] = widget.NewEntry()
-			rgbaEntries[i].SetText(getColorComponentString(colorValue, i))
-			rgbaEntries[i].OnChanged = func(_ string) {
-				newColor := color.NRGBA{
-					parseColorComponent(rgbaEntries[0].Text),
-					parseColorComponent(rgbaEntries[1].Text),
-					parseColorComponent(rgbaEntries[2].Text),
-					parseColorComponent(rgbaEntries[3].Text),
-				}
-				colorPreview.FillColor = newColor
-				colorPreview.Refresh()
-				// setThemeColor(currentTheme, prop, newColor)
-			}
-		}
+		// Store the color preview in the map
+		colorPreviews[prop] = colorPreview
+
+		changeColorButton := widget.NewButton("Change Color", func() {
+			showColorPickerWindow(prop, colorPreview, currentTheme, app, window)
+		})
 
 		row := container.NewHBox(
 			widget.NewLabel(prop),
 			colorPreview,
-			widget.NewLabel("R: "),
-			rgbaEntries[0],
-			widget.NewLabel("G: "),
-			rgbaEntries[1],
-			widget.NewLabel("B: "),
-			rgbaEntries[2],
-			widget.NewLabel("A: "),
-			rgbaEntries[3],
+			changeColorButton,
 		)
 		content.Add(row)
 	}
 
 	applyButton := widget.NewButton("Apply Theme", func() {
 		app.Settings().SetTheme(currentTheme)
+		dialog.ShowInformation("Theme Applied", "Theme applied successfully", window)
+		window.Close()
 	})
 	content.Add(applyButton)
 
@@ -1485,33 +1468,72 @@ func parseColorComponent(s string) uint8 {
 	return uint8(v)
 }
 
-func showColorPickerWindow(window fyne.Window) {
-	dialogContent := container.NewVBox()
-	previewRect := canvas.NewRectangle(color.White)
-	previewRect.Resize(fyne.NewSize(35, 30))
-	bgRect := canvas.NewRectangle(color.Black)
-	r, g, b := widget.NewSlider(0, 255), widget.NewSlider(0, 255), widget.NewSlider(0, 255)
-	r.Step = 1
-	g.Step = 1
-	b.Step = 1
-	h, s, v := widget.NewSlider(0, 359), widget.NewSlider(0, 1), widget.NewSlider(0, 1)
-	s.Step = 0.01
-	v.Step = 0.01
-	dialogContent.Add(widget.NewLabel("Pick a color:"))
+func showColorPickerWindow(propertyName string, colorPreview *canvas.Rectangle, currentTheme fyne.Theme, a fyne.App, w fyne.Window) {
+	colorPickerWindow := a.NewWindow("Color Picker")
+	colorPickerWindow.SetTitle("Color picker")
+
+	colorPreviewRect := canvas.NewRectangle(color.NRGBA{0, 0, 130, 255})
+	colorPreviewRect.SetMinSize(fyne.NewSize(64, 128))
+	colorPreviewRect.CornerRadius = 5
+
+	var content *fyne.Container
+	var updateColor func()
+
 	if options.UseRGB {
-		dialogContent.Add(widget.NewLabel("Red:"))
-		dialogContent.Add(r)
-		dialogContent.Add(widget.NewLabel("Green:"))
-		dialogContent.Add(g)
-		dialogContent.Add(widget.NewLabel("Blue:"))
-		dialogContent.Add(b)
+		r, g, b := widget.NewSlider(0, 255), widget.NewSlider(0, 255), widget.NewSlider(0, 255)
+		updateColor = func() {
+			newColor := color.NRGBA{uint8(r.Value), uint8(g.Value), uint8(b.Value), 255}
+			colorPreviewRect.FillColor = newColor
+			colorPreview.FillColor = newColor
+			setThemeColor(currentTheme, propertyName, newColor)
+			w.Content().Refresh()
+			colorPreviewRect.Refresh()
+			colorPreview.Refresh()
+		}
+		for _, slider := range []*widget.Slider{r, g, b} {
+			slider.OnChanged = func(_ float64) { updateColor() }
+		}
+		content = container.NewVBox(
+			widget.NewLabel("Color preview:"),
+			colorPreviewRect,
+			widget.NewLabel("Red:"), r,
+			widget.NewLabel("Green:"), g,
+			widget.NewLabel("Blue:"), b,
+		)
 	} else {
-		dialogContent.Add(widget.NewLabel("Hue:"))
-		dialogContent.Add(h)
-		dialogContent.Add(widget.NewLabel("Saturation:"))
-		dialogContent.Add(s)
-		dialogContent.Add(widget.NewLabel("Value:"))
-		dialogContent.Add(v)
+		h, s, v := widget.NewSlider(0, 359), widget.NewSlider(0, 1), widget.NewSlider(0, 1)
+		h.Value, s.Value, v.Value = 200, 0.5, 1
+		h.Step, s.Step, v.Step = 1, 0.01, 0.01
+		updateColor = func() {
+			hex := HSVToHex(h.Value, s.Value, v.Value)
+			if newColor, err := HexToColor(hex); err == nil {
+				colorPreviewRect.FillColor = newColor
+				colorPreview.FillColor = newColor
+				setThemeColor(currentTheme, propertyName, newColor)
+				w.Content().Refresh()
+				colorPreviewRect.Refresh()
+				colorPreview.Refresh()
+			}
+		}
+		for _, slider := range []*widget.Slider{h, s, v} {
+			slider.OnChanged = func(_ float64) { updateColor() }
+		}
+		content = container.NewVBox(
+			widget.NewLabel("Color preview:"),
+			colorPreviewRect,
+			widget.NewLabel("Hue:"), h,
+			widget.NewLabel("Saturation:"), s,
+			widget.NewLabel("Value:"), v,
+		)
 	}
-	dialog.NewCustom("Color Picker", "OK", container.NewStack(dialogContent, bgRect), window).Show()
+
+	pickColorButton := widget.NewButton("Pick Color", func() {
+		colorPickerWindow.Close()
+	})
+	content.Add(pickColorButton)
+
+	colorPickerWindow.SetContent(content)
+	colorPickerWindow.Resize(fyne.NewSize(300, 400))
+	colorPickerWindow.Show()
+	updateColor() // Initial color update
 }
