@@ -9,7 +9,7 @@ import (
 	"math"
 
 	// "image/draw"
-	"errors"
+	// "errors"
 	"image/jpeg"
 	"image/png"
 	"log"
@@ -59,6 +59,87 @@ func (b *imageButton) Tapped(*fyne.PointEvent) {
 	}
 }
 
+type defaultTheme struct{}
+
+// the custom default theme
+func (defaultTheme) Color(c fyne.ThemeColorName, v fyne.ThemeVariant) color.Color {
+	switch c {
+	case theme.ColorNameBackground:
+		return color.NRGBA{R: 0x30, G: 0x30, B: 0x30, A: 0xff}
+	case theme.ColorNameButton:
+		return color.Alpha16{A: 0x0}
+	case theme.ColorNameDisabledButton:
+		return color.NRGBA{R: 0x26, G: 0x26, B: 0x26, A: 0xff}
+	case theme.ColorNameDisabled:
+		return color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0x42}
+	case theme.ColorNameError:
+		return color.NRGBA{R: 0xf4, G: 0x43, B: 0x36, A: 0xff}
+	case theme.ColorNameFocus:
+		return color.NRGBA{R: 0x21, G: 0x96, B: 0xf3, A: 0x7f}
+	case theme.ColorNameForeground:
+		return color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
+	case theme.ColorNameHover:
+		return color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xf}
+	case theme.ColorNameInputBackground:
+		return color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0x19}
+	case theme.ColorNamePlaceHolder:
+		return color.NRGBA{R: 0xb2, G: 0xb2, B: 0xb2, A: 0xff}
+	case theme.ColorNamePressed:
+		return color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0x66}
+	case theme.ColorNamePrimary:
+		return color.NRGBA{R: 0x21, G: 0x96, B: 0xf3, A: 0xff}
+	case theme.ColorNameScrollBar:
+		return color.NRGBA{R: 0x0, G: 0x0, B: 0x0, A: 0x99}
+	case theme.ColorNameShadow:
+		return color.NRGBA{R: 0x0, G: 0x0, B: 0x0, A: 0x66}
+	default:
+		return theme.DefaultTheme().Color(c, v)
+	}
+}
+
+func (defaultTheme) Font(s fyne.TextStyle) fyne.Resource {
+	if s.Monospace {
+		return theme.DefaultTheme().Font(s)
+	}
+	if s.Bold {
+		if s.Italic {
+			return theme.DefaultTheme().Font(s)
+		}
+		return theme.DefaultTheme().Font(s)
+	}
+	if s.Italic {
+		return theme.DefaultTheme().Font(s)
+	}
+	return theme.DefaultTheme().Font(s)
+}
+
+func (defaultTheme) Icon(n fyne.ThemeIconName) fyne.Resource {
+	return theme.DefaultTheme().Icon(n)
+}
+
+func (defaultTheme) Size(s fyne.ThemeSizeName) float32 {
+	switch s {
+	case theme.SizeNameCaptionText:
+		return 11
+	case theme.SizeNameInlineIcon:
+		return 20
+	case theme.SizeNamePadding:
+		return 4
+	case theme.SizeNameScrollBar:
+		return 16
+	case theme.SizeNameScrollBarSmall:
+		return 3
+	case theme.SizeNameSeparatorThickness:
+		return 1
+	case theme.SizeNameText:
+		return 14
+	case theme.SizeNameInputBorder:
+		return 2
+	default:
+		return theme.DefaultTheme().Size(s)
+	}
+}
+
 // type theme struct {
 // Color color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xFF},
 // PrimaryColor: color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xFF},
@@ -85,6 +166,7 @@ type Options struct {
 	Timezone     int // Timezone like UTC+3 or UTC-3
 	SortDesc     bool
 	UseRGB       bool
+	ExifFields   []string // exif fields to display in the sidebar
 }
 
 func (opts Options) InitDefault() *Options {
@@ -94,6 +176,7 @@ func (opts Options) InitDefault() *Options {
 		Timezone:     3,
 		SortDesc:     true,
 		UseRGB:       false,
+		ExifFields:   []string{"DateTime"},
 	}
 }
 
@@ -147,9 +230,9 @@ func main() {
 	a := app.NewWithID("TagVault")
 	w := setupMainWindow(a)
 
-	// discoverImages(db)
+	a.Settings().SetTheme(&defaultTheme{})
 
-	// a.Settings().SetTheme(&theme)
+	// discoverImages(db)
 
 	content := container.NewVBox()
 	scroll := container.NewVScroll(content)
@@ -164,8 +247,6 @@ func main() {
 	testPath := getImagePath()
 
 	content.RemoveAll()
-
-	// displayImage(db, w, testPath, content, sidebar, sidebarScroll, split, a)
 
 	input := widget.NewEntry()
 	input.SetPlaceHolder("Enter a Tag to Search by")
@@ -379,13 +460,15 @@ func createDisplayImagesFunction(db *sql.DB, w fyne.Window, sidebar *fyne.Contai
 		}
 
 		// make a grid to display images
-		imageContainer := container.NewAdaptiveGrid(4)
-		// create a loading bar
+		imageContainer := container.NewAdaptiveGrid(5) // default value 4
+		// create a loading bar & start it
 		loadingIndicator := widget.NewProgressBarInfinite()
 		loadingIndicator.Start()
+		// create a loading message
 		loadingMessage := widget.NewLabel("Loading images...")
 		content := container.NewVBox(loadingIndicator, loadingMessage, imageContainer)
 		// content := container.NewGridWithRows(3, loadingIndicator, loadingMessage, imageContainer)
+		// still loading so display loading message and bar
 		mainContainer.Add(content)
 
 		var wg sync.WaitGroup
@@ -416,9 +499,11 @@ func createDisplayImagesFunction(db *sql.DB, w fyne.Window, sidebar *fyne.Contai
 			// mainContainer.Add(content)
 			// w.SetContent(content) // this shit fixes the problem
 
+			// images finished loading so stop & remove loading bar & loading message
 			loadingIndicator.Stop()
 			content.Remove(loadingMessage)
 			content.Remove(loadingIndicator)
+			// refresh the container that contains images
 			canvas.Refresh(content)
 		}()
 	}
@@ -441,7 +526,7 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 	// claude ai
 	go func() {
 		// load the image as a fyne resource
-		resource, err := loadImageResourceEfficient(path)
+		resource, err := loadImageResourceThumbnailEfficient(path)
 		if err != nil {
 			logger.Printf("No resource image empty %s: %v", path, err)
 			resourceChan <- placeholderResource
@@ -463,12 +548,13 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 	}
 
 	// truncate the image name
-	truncatedName := truncateFilename(filepath.Base(path), 10)
+	// truncatedName := truncateFilename(filepath.Base(path), 10)
 	db.Exec("INSERT INTO Image (path, dateAdded) SELECT ?, DATETIME('now') WHERE NOT EXISTS (SELECT 1 FROM Image WHERE path = ?);", path, path)
-	label := widget.NewLabel(truncatedName)
+	// label := widget.NewLabel(truncatedName)
 
 	// make a parent container to hold the image button and label
-	imageTile := container.NewVBox(container.NewPadded(imgButton), label)
+	// imageTile := container.NewVBox(container.NewPadded(imgButton), label)
+	imageTile := container.NewVBox(container.NewPadded(imgButton))
 	imageContainer.Add(imageTile)
 }
 
@@ -511,6 +597,7 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 
 	sidebarScroll.Show()
 	imageContainer.Refresh()
+	tagDisplay.Refresh()
 	// sidebar.Show()
 	split.Offset = 0.65 // was 0.7 by default
 	sidebar.Refresh()
@@ -572,7 +659,7 @@ func showTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int, tagLis
 
 			button := widget.NewButton(name, nil)
 			button.Importance = widget.LowImportance
-			c, _ := colorFromHex(color)
+			c, _ := HexToColor(color)
 			rect := canvas.NewRectangle(c)
 			rect.CornerRadius = 5
 
@@ -603,83 +690,209 @@ func showTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int, tagLis
 	}()
 }
 
+// func createTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
+// 	tagWindow := a.NewWindow("Create Tag")
+// 	tagWindow.SetTitle("Create a Tag")
+
+// 	r, g, b := widget.NewSlider(0, 255), widget.NewSlider(0, 255), widget.NewSlider(0, 255)
+// 	switch options.UseRGB {
+// 	case true:
+// 		r = widget.NewSlider(0, 255)
+// 		g = widget.NewSlider(0, 255)
+// 		b = widget.NewSlider(0, 255)
+// 	case false:
+// 		break
+// 	default:
+// 		dialog.ShowError(errors.New("Tag color mode not set in options"), tagWindow)
+// 	}
+
+// 	colorPreviewRect := canvas.NewRectangle(color.NRGBA{0, 0, 130, 0})
+// 	colorPreviewRect.SetMinSize(fyne.NewSize(64, 128))
+// 	colorPreviewRect.CornerRadius = 5
+
+// 	h := widget.NewSlider(0, 359)
+// 	s := widget.NewSlider(0, 1)
+// 	v := widget.NewSlider(0, 1)
+// 	// this should be some blue color
+// 	h.Value = 200
+// 	h.Step = 1
+// 	s.Value = 0.5
+// 	s.Step = 0.1
+// 	v.Value = 100
+// 	v.Step = 0.1
+
+// 	h.OnChanged = func(value float64) {
+// 		h, s, v := h.Value, s.Value, v.Value
+// 		hex := HSVToHex(h, s, v)
+// 		color, err := HexToColor(hex)
+// 		if err != nil {
+// 			dialog.ShowError(err, tagWindow)
+// 			return
+// 		}
+// 		colorPreviewRect.FillColor = color
+// 	}
+// 	s.OnChanged = func(value float64) {
+// 		h, s, v := h.Value, s.Value, v.Value
+// 		hex := HSVToHex(h, s, v)
+// 		color, err := HexToColor(hex)
+// 		if err != nil {
+// 			dialog.ShowError(err, tagWindow)
+// 			return
+// 		}
+// 		colorPreviewRect.FillColor = color
+// 	}
+// 	v.OnChanged = func(value float64) {
+// 		h, s, v := h.Value, s.Value, v.Value
+// 		hex := HSVToHex(h, s, v)
+// 		color, err := HexToColor(hex)
+// 		if err != nil {
+// 			dialog.ShowError(err, tagWindow)
+// 			return
+// 		}
+// 		colorPreviewRect.FillColor = color
+// 	}
+
+// 	r.OnChanged = func(value float64) {
+// 		r, g, b := r.Value, g.Value, b.Value
+// 		colorPreviewRect.FillColor = color.NRGBA{uint8(r), uint8(g), uint8(b), 255}
+// 	}
+// 	g.OnChanged = func(value float64) {
+// 		r, g, b := r.Value, g.Value, b.Value
+// 		colorPreviewRect.FillColor = color.NRGBA{uint8(r), uint8(g), uint8(b), 255}
+// 	}
+// 	b.OnChanged = func(value float64) {
+// 		r, g, b := r.Value, g.Value, b.Value
+// 		colorPreviewRect.FillColor = color.NRGBA{uint8(r), uint8(g), uint8(b), 255}
+// 	}
+
+// 	stringInput := widget.NewEntry()
+// 	stringInput.SetPlaceHolder("Enter Tag name")
+
+// 	createButton := widget.NewButton("Create Tag", func() {
+// 		tagName := stringInput.Text
+// 		if tagName == "" {
+// 			dialog.ShowInformation("Error", "Tag name cannot be empty", tagWindow)
+// 			return
+// 		}
+// 		if !options.UseRGB {
+// 			hexColor := HSVToHex(h.Value, s.Value, v.Value)
+// 			_, err := db.Exec("INSERT INTO Tag (name, color) VALUES (?, ?)", tagName, hexColor)
+// 			if err != nil {
+// 				fmt.Print("createTagWindow")
+// 				dialog.ShowError(err, tagWindow)
+// 				return
+// 			}
+// 			dialog.ShowInformation("Tag Created", "Tag Name: "+tagName+"\nColor: "+hexColor, tagWindow)
+// 		} else {
+// 			hexColor := fmt.Sprintf("#%02X%02X%02X", int(r.Value), int(g.Value), int(b.Value))
+// 			_, err := db.Exec("INSERT INTO Tag (name, color) VALUES (?, ?)", tagName, hexColor)
+// 			if err != nil {
+// 				fmt.Print("createTagWindow")
+// 				dialog.ShowError(err, tagWindow)
+// 				return
+// 			}
+// 			dialog.ShowInformation("Tag Created", "Tag Name: "+tagName+"\nColor: "+string(hexColor), tagWindow)
+// 		}
+// 		tagWindow.Close()
+// 	})
+
+// 	content := container.NewVBox()
+// 	// if not rgb show HSV
+// 	if !options.UseRGB {
+// 		content = container.NewVBox(
+// 			widget.NewLabel("Color preview:"),
+// 			colorPreviewRect,
+// 			widget.NewLabel("Hue:"),
+// 			h,
+// 			widget.NewLabel("Saturation:"),
+// 			s,
+// 			widget.NewLabel("Value:"),
+// 			v,
+// 			widget.NewLabel("Enter tag name:"),
+// 			stringInput,
+// 			createButton,
+// 		)
+// 	} else {
+// 		// else show RGB
+// 		content = container.NewVBox(
+// 			widget.NewLabel("Color preview:"),
+// 			colorPreviewRect,
+// 			widget.NewLabel("Red:"),
+// 			r,
+// 			widget.NewLabel("Green:"),
+// 			g,
+// 			widget.NewLabel("Blue:"),
+// 			b,
+// 			widget.NewLabel("Enter tag name:"),
+// 			stringInput,
+// 			createButton,
+// 		)
+// 	}
+
+// 	tagWindow.SetContent(content)
+// 	tagWindow.Resize(fyne.NewSize(300, 200))
+// 	tagWindow.Show()
+// }
+
 func createTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 	tagWindow := a.NewWindow("Create Tag")
 	tagWindow.SetTitle("Create a Tag")
 
-	r, g, b := widget.NewSlider(0, 255), widget.NewSlider(0, 255), widget.NewSlider(0, 255)
-	switch options.UseRGB {
-	case true:
-		r = widget.NewSlider(0, 255)
-		g = widget.NewSlider(0, 255)
-		b = widget.NewSlider(0, 255)
-	case false:
-		break
-	default:
-		dialog.ShowError(errors.New("Tag color mode not set in options"), tagWindow)
-	}
-
-	colorPreviewRect := canvas.NewRectangle(color.NRGBA{0, 0, 130, 0})
+	colorPreviewRect := canvas.NewRectangle(color.NRGBA{0, 0, 130, 255})
 	colorPreviewRect.SetMinSize(fyne.NewSize(64, 128))
 	colorPreviewRect.CornerRadius = 5
 
-	h := widget.NewSlider(0, 359)
-	s := widget.NewSlider(0, 1)
-	v := widget.NewSlider(0, 1)
-	// this should be some blue color
-	h.Value = 200
-	h.Step = 1
-	s.Value = 0.5
-	s.Step = 0.1
-	v.Value = 100
-	v.Step = 0.1
-
-	h.OnChanged = func(value float64) {
-		h, s, v := h.Value, s.Value, v.Value
-		hex := HSVToHex(h, s, v)
-		color, err := colorFromHex(hex)
-		if err != nil {
-			dialog.ShowError(err, tagWindow)
-			return
-		}
-		colorPreviewRect.FillColor = color
-	}
-	s.OnChanged = func(value float64) {
-		h, s, v := h.Value, s.Value, v.Value
-		hex := HSVToHex(h, s, v)
-		color, err := colorFromHex(hex)
-		if err != nil {
-			dialog.ShowError(err, tagWindow)
-			return
-		}
-		colorPreviewRect.FillColor = color
-	}
-	v.OnChanged = func(value float64) {
-		h, s, v := h.Value, s.Value, v.Value
-		hex := HSVToHex(h, s, v)
-		color, err := colorFromHex(hex)
-		if err != nil {
-			dialog.ShowError(err, tagWindow)
-			return
-		}
-		colorPreviewRect.FillColor = color
-	}
-
-	r.OnChanged = func(value float64) {
-		r, g, b := r.Value, g.Value, b.Value
-		colorPreviewRect.FillColor = color.NRGBA{uint8(r), uint8(g), uint8(b), 255}
-	}
-	g.OnChanged = func(value float64) {
-		r, g, b := r.Value, g.Value, b.Value
-		colorPreviewRect.FillColor = color.NRGBA{uint8(r), uint8(g), uint8(b), 255}
-	}
-	b.OnChanged = func(value float64) {
-		r, g, b := r.Value, g.Value, b.Value
-		colorPreviewRect.FillColor = color.NRGBA{uint8(r), uint8(g), uint8(b), 255}
-	}
-
 	stringInput := widget.NewEntry()
 	stringInput.SetPlaceHolder("Enter Tag name")
+
+	var content *fyne.Container
+	var updateColor func()
+	var getHexColor func() string
+
+	if options.UseRGB {
+		r, g, b := widget.NewSlider(0, 255), widget.NewSlider(0, 255), widget.NewSlider(0, 255)
+		updateColor = func() {
+			colorPreviewRect.FillColor = color.NRGBA{uint8(r.Value), uint8(g.Value), uint8(b.Value), 255}
+			colorPreviewRect.Refresh()
+		}
+		getHexColor = func() string {
+			return fmt.Sprintf("#%02X%02X%02X", int(r.Value), int(g.Value), int(b.Value))
+		}
+		for _, slider := range []*widget.Slider{r, g, b} {
+			slider.OnChanged = func(_ float64) { updateColor() }
+		}
+		content = container.NewVBox(
+			widget.NewLabel("Color preview:"),
+			colorPreviewRect,
+			widget.NewLabel("Red:"), r,
+			widget.NewLabel("Green:"), g,
+			widget.NewLabel("Blue:"), b,
+		)
+	} else {
+		h, s, v := widget.NewSlider(0, 359), widget.NewSlider(0, 100), widget.NewSlider(0, 100)
+		h.Value, s.Value, v.Value = 200, 50, 100
+		h.Step, s.Step, v.Step = 1, 1, 1
+		updateColor = func() {
+			hex := HSVToHex(h.Value, s.Value/100, v.Value/100)
+			if color, err := HexToColor(hex); err == nil {
+				colorPreviewRect.FillColor = color
+				colorPreviewRect.Refresh()
+			}
+		}
+		getHexColor = func() string {
+			return HSVToHex(h.Value, s.Value/100, v.Value/100)
+		}
+		for _, slider := range []*widget.Slider{h, s, v} {
+			slider.OnChanged = func(_ float64) { updateColor() }
+		}
+		content = container.NewVBox(
+			widget.NewLabel("Color preview:"),
+			colorPreviewRect,
+			widget.NewLabel("Hue:"), h,
+			widget.NewLabel("Saturation:"), s,
+			widget.NewLabel("Value:"), v,
+		)
+	}
 
 	createButton := widget.NewButton("Create Tag", func() {
 		tagName := stringInput.Text
@@ -687,64 +900,28 @@ func createTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 			dialog.ShowInformation("Error", "Tag name cannot be empty", tagWindow)
 			return
 		}
-		if !options.UseRGB {
-			hexColor := HSVToHex(h.Value, s.Value, v.Value)
-			_, err := db.Exec("INSERT INTO Tag (name, color) VALUES (?, ?)", tagName, hexColor)
-			if err != nil {
-				fmt.Print("createTagWindow")
-				dialog.ShowError(err, tagWindow)
-				return
-			}
-			dialog.ShowInformation("Tag Created", "Tag Name: "+tagName+"\nColor: "+hexColor, tagWindow)
-		} else {
-			hexColor := fmt.Sprintf("#%02X%02X%02X", int(r.Value), int(g.Value), int(b.Value))
-			_, err := db.Exec("INSERT INTO Tag (name, color) VALUES (?, ?)", tagName, hexColor)
-			if err != nil {
-				fmt.Print("createTagWindow")
-				dialog.ShowError(err, tagWindow)
-				return
-			}
-			dialog.ShowInformation("Tag Created", "Tag Name: "+tagName+"\nColor: "+string(hexColor), tagWindow)
+
+		hexColor := getHexColor()
+
+		_, err := db.Exec("INSERT INTO Tag (name, color) VALUES (?, ?)", tagName, hexColor)
+		if err != nil {
+			dialog.ShowError(fmt.Errorf("createTagWindow: %w", err), tagWindow)
+			return
 		}
+
+		dialog.ShowInformation("Tag Created", fmt.Sprintf("Tag Name: %s\nColor: %s", tagName, hexColor), tagWindow)
 		tagWindow.Close()
 	})
 
-	content := container.NewVBox()
-	// if not rgb show HSV
-	if !options.UseRGB {
-		content = container.NewVBox(
-			widget.NewLabel("Color preview:"),
-			colorPreviewRect,
-			widget.NewLabel("Hue:"),
-			h,
-			widget.NewLabel("Saturation:"),
-			s,
-			widget.NewLabel("Value:"),
-			v,
-			widget.NewLabel("Enter tag name:"),
-			stringInput,
-			createButton,
-		)
-	} else {
-		// else show RGB
-		content = container.NewVBox(
-			widget.NewLabel("Color preview:"),
-			colorPreviewRect,
-			widget.NewLabel("Red:"),
-			r,
-			widget.NewLabel("Green:"),
-			g,
-			widget.NewLabel("Blue:"),
-			b,
-			widget.NewLabel("Enter tag name:"),
-			stringInput,
-			createButton,
-		)
-	}
+	content.Add(widget.NewLabel("Enter tag name:"))
+	content.Add(stringInput)
+	content.Add(createButton)
 
 	tagWindow.SetContent(content)
-	tagWindow.Resize(fyne.NewSize(300, 200))
+	tagWindow.Resize(fyne.NewSize(300, 400))
 	tagWindow.Show()
+
+	updateColor() // Initial color update
 }
 
 func isImageFile(filename string) bool {
@@ -801,10 +978,8 @@ func loadImageResourceEfficient(path string) (fyne.Resource, error) {
 	switch filepath.Ext(path) {
 	case ".jpg", ".jpeg":
 		img, _, err = image.Decode(file)
-		// img, err = jpeg.Decode(file)
 	case ".png":
 		img, _, err = image.Decode(file)
-		// img, err = png.Decode(file)
 	// Add more cases for other image types if needed
 	default:
 		return nil, fmt.Errorf("unsupported image format")
@@ -826,14 +1001,12 @@ func loadImageResourceEfficient(path string) (fyne.Resource, error) {
 	}
 
 	// Create a new image with the thumbnail dimensions
-
 	thumbImg := image.NewRGBA(image.Rect(0, 0, thumbWidth, thumbHeight))
 
 	// Resize the image
-	// draw.Draw(thumbImg, thumbImg.Bounds(), img, img.Bounds().Min, draw.Src)
 	draw.ApproxBiLinear.Scale(thumbImg, thumbImg.Bounds(), img, img.Bounds(), draw.Over, nil)
 
-	// // Encode the resized image
+	// Encode the resized image
 	var buf bytes.Buffer
 	switch filepath.Ext(path) {
 	case ".jpg", ".jpeg":
@@ -845,14 +1018,70 @@ func loadImageResourceEfficient(path string) (fyne.Resource, error) {
 		return nil, err
 	}
 
-	// // Create a new static resource with the thumbnail image
+	// Create a new static resource with the thumbnail image
 	resource := fyne.NewStaticResource(filepath.Base(path), buf.Bytes())
-	// resource, err := fyne.LoadResourceFromPath(filepath.Base(path))
-	// if err != nil {
-	// 	logger.Fatalln(err)
-	// 	return nil, err
-	// }
-	// resource.SetContent(buf.Bytes())
+
+	// Store in cache
+	resourceCache.Store(path, resource)
+
+	return resource, nil
+}
+
+func loadImageResourceThumbnailEfficient(path string) (fyne.Resource, error) {
+	if cachedResource, ok := resourceCache.Load(path); ok {
+		return cachedResource.(fyne.Resource), nil
+	}
+
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	// Decode the image
+	img, _, err := image.Decode(file)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate the square crop region from the center of the image
+	bounds := img.Bounds()
+	size := bounds.Dx()
+	if bounds.Dy() < size {
+		size = bounds.Dy()
+	}
+	x := (bounds.Dx() - size) / 2
+	y := (bounds.Dy() - size) / 2
+
+	// Create a new square image for the thumbnail
+	thumbImg := image.NewRGBA(image.Rect(0, 0, thumbnailSize, thumbnailSize))
+
+	// Crop and resize the image
+	draw.ApproxBiLinear.Scale(
+		thumbImg,
+		thumbImg.Bounds(),
+		img,
+		image.Rect(x, y, x+size, y+size),
+		draw.Over,
+		nil,
+	)
+
+	// Encode the resized image
+	var buf bytes.Buffer
+	switch filepath.Ext(path) {
+	case ".jpg", ".jpeg":
+		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
+	case ".png":
+		err = png.Encode(&buf, thumbImg)
+	default:
+		return nil, fmt.Errorf("unsupported image format")
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a new static resource with the thumbnail image
+	resource := fyne.NewStaticResource(filepath.Base(path), buf.Bytes())
 
 	// Store in cache
 	resourceCache.Store(path, resource)
@@ -965,7 +1194,7 @@ func createTagDisplay(db *sql.DB, imageId int) *fyne.Container {
 
 		tagButton := widget.NewButton(tagName, nil)
 		tagButton.Importance = widget.LowImportance
-		c, _ := colorFromHex(tagColor)
+		c, _ := HexToColor(tagColor)
 		rect := canvas.NewRectangle(c)
 		rect.CornerRadius = 5
 
@@ -982,8 +1211,6 @@ func createTagDisplay(db *sql.DB, imageId int) *fyne.Container {
 				}
 			}, nil)
 		}
-		// Old version
-		// tagDisplay.Add(container.NewStack(rect, tagButton))
 		// New version with padding
 		tagDisplay.Add(container.NewPadded(container.NewStack(rect, tagButton)))
 	}
@@ -992,7 +1219,6 @@ func createTagDisplay(db *sql.DB, imageId int) *fyne.Container {
 }
 
 // Helper function to convert a HSV color to Hex color string
-
 func HSVToHex(h, s, v float64) string {
 	h = math.Mod(h, 360)            // Ensure hue is between 0 and 359
 	s = math.Max(0, math.Min(1, s)) // Clamp saturation between 0 and 1
@@ -1023,11 +1249,11 @@ func HSVToHex(h, s, v float64) string {
 	g = (g + m) * 255
 	b = (b + m) * 255
 
-	return fmt.Sprintf("#%02X%02X%02X", int(r), int(g), int(b))
+	return fmt.Sprintf("#%02X%02X%02X", uint8(r), uint8(g), uint8(b))
 }
 
 // Helper function to convert hex color to color.Color
-func colorFromHex(hex string) (color.Color, error) {
+func HexToColor(hex string) (color.Color, error) {
 	hex = strings.TrimPrefix(hex, "#")
 	if len(hex) != 6 {
 		return nil, fmt.Errorf("invalid hex color")
