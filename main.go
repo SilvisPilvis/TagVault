@@ -1329,7 +1329,7 @@ func showSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 
 	// Create a button to open the theme editor
 	themeEditorButton := widget.NewButton("Theme Editor", func() {
-		showThemeEditorWindow(a, defaultTheme{})
+		showThemeEditorWindow(a, defaultTheme{}, parent)
 	})
 
 	// Create a container for the settings content
@@ -1347,7 +1347,7 @@ func showSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 	settingsWindow.Show()
 }
 
-func showThemeEditorWindow(app fyne.App, currentTheme fyne.Theme) {
+func showThemeEditorWindow(app fyne.App, currentTheme fyne.Theme, w fyne.Window) {
 	window := app.NewWindow("Theme Editor")
 	window.SetTitle("Theme Editor")
 	colorProperties := []string{
@@ -1394,7 +1394,7 @@ func showThemeEditorWindow(app fyne.App, currentTheme fyne.Theme) {
 
 	applyButton := widget.NewButton("Apply Theme", func() {
 		app.Settings().SetTheme(currentTheme)
-		dialog.ShowInformation("Theme Applied", "Theme applied successfully", window)
+		// w.Content().Refresh()
 		window.Close()
 	})
 	content.Add(applyButton)
@@ -1440,8 +1440,38 @@ func getThemeColor(t fyne.Theme, prop string) color.Color {
 }
 
 func setThemeColor(t fyne.Theme, prop string, c color.Color) {
-	// This function would need to be implemented based on your theme implementation.
-	// It should set the color for the given property in the theme.
+	switch prop {
+	case "BackgroundColor":
+		t.Color(fyne.ThemeColorName(prop), theme.VariantDark) // this should return c
+	case "ButtonColor":
+		t.SetColor("button", theme.VariantDark, c)
+	case "DisabledButtonColor":
+		t.SetColor("disabledButton", theme.VariantDark, c)
+	case "TextColor":
+		t.SetColor("foreground", theme.VariantDark, c)
+	case "DisabledTextColor":
+		t.SetColor("disabledForeground", theme.VariantDark, c)
+	case "IconColor":
+		t.SetColor("icon", theme.VariantDark, c)
+	case "DisabledIconColor":
+		t.SetColor("disabledIcon", theme.VariantDark, c)
+	case "PlaceHolderColor":
+		t.SetColor("placeholder", theme.VariantDark, c)
+	case "PrimaryColor":
+		t.SetColor("primary", theme.VariantDark, c)
+	case "HoverColor":
+		t.SetColor("hover", theme.VariantDark, c)
+	case "FocusColor":
+		t.SetColor("focus", theme.VariantDark, c)
+	case "ScrollBarColor":
+		t.SetColor("scrollBar", theme.VariantDark, c)
+	case "ShadowColor":
+		t.SetColor("shadow", theme.VariantDark, c)
+	case "ErrorColor":
+		t.SetColor("error", theme.VariantDark, c)
+	default:
+		return
+	}
 }
 
 func getColorComponentString(c color.Color, component int) string {
