@@ -250,19 +250,31 @@ func main() {
 	input := widget.NewEntry()
 	input.SetPlaceHolder("Enter a Tag to Search by")
 
-	form := &widget.Form{
-		Items: []*widget.FormItem{{Text: "Tag", Widget: input}},
-		OnSubmit: func() {
-			tagName := input.Text
-			// imagePaths, err := searchImagesByTag(db, tagName)
-			imagePaths, err := getImagePathsByTag(db, "%"+tagName+"%")
-			if err != nil {
-				fmt.Print("searchImagesByTag")
-				dialog.ShowError(err, w)
-				return
-			}
-			updateContentWithSearchResults(content, imagePaths, db, w, sidebar, sidebarScroll, split, a)
-		},
+	// form := &widget.Form{
+	// 	Items: []*widget.FormItem{{Text: "Tag", Widget: input}},
+	// 	OnSubmit: func() {
+	// 		tagName := input.Text
+	// 		// imagePaths, err := searchImagesByTag(db, tagName)
+	// 		imagePaths, err := getImagePathsByTag(db, "%"+tagName+"%")
+	// 		if err != nil {
+	// 			fmt.Print("searchImagesByTag")
+	// 			dialog.ShowError(err, w)
+	// 			return
+	// 		}
+	// 		updateContentWithSearchResults(content, imagePaths, db, w, sidebar, sidebarScroll, split, a)
+	// 	},
+	// }
+
+	form := widget.NewEntry()
+	form.SetPlaceHolder("Enter a Tag to Search by")
+	form.OnChanged = func(s string) {
+		imagePaths, err := getImagePathsByTag(db, "%"+s+"%")
+		if err != nil {
+			fmt.Print("searchImagesByTag")
+			dialog.ShowError(err, w)
+			return
+		}
+		updateContentWithSearchResults(content, imagePaths, db, w, sidebar, sidebarScroll, split, a)
 	}
 
 	settingsButton := widget.NewButton("", func() {
@@ -285,6 +297,7 @@ func main() {
 
 	// controls := container.NewBorder(nil, nil, nil, settingsButton, form)
 	controls := container.NewBorder(nil, nil, nil, optContainer, form)
+	// controls := container.NewBorder(nil, nil, nil, optContainer)
 	mainContainer := container.NewBorder(controls, nil, nil, nil, split)
 	displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, content)
 	// displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, mainContainer)
