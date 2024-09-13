@@ -9,7 +9,7 @@ import (
 	"math"
 
 	// "image/draw"
-	// "errors"
+
 	"image/jpeg"
 	"image/png"
 	"log"
@@ -197,6 +197,7 @@ func main() {
 	defer db.Close()
 
 	logger.Println("Check Obsidian Todo list")
+	logger.Println("Make displayImages work with getImagesFromDatabase")
 
 	// logger.Println("Minimize widget updates:
 	// Fyne's object tree walking is often triggered by widget updates. Try to reduce unnecessary updates by:
@@ -230,7 +231,13 @@ func main() {
 
 	a.Settings().SetTheme(&defaultTheme{})
 
-	// discoverImages(db)
+	// walk trough all directories and if image add to db
+	_, err := discoverImages(db)
+	if err != nil {
+		// dialog.ShowError(err, w)
+		// return
+		logger.Fatalln("Error discovering images:", err)
+	}
 
 	content := container.NewVBox()
 	scroll := container.NewVScroll(content)
@@ -298,8 +305,12 @@ func main() {
 	controls := container.NewBorder(nil, nil, nil, optContainer, form)
 	// controls := container.NewBorder(nil, nil, nil, optContainer)
 	mainContainer := container.NewBorder(controls, nil, nil, nil, container.NewPadded(split))
-	displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, content)
-	// displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, mainContainer)
+	// displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, content)
+	dbImages, err := getImagesFromDatabase(db)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	displayImages := createDisplayImagesFunctionFromDb(db, w, sidebar, sidebarScroll, split, a, mainContainer, dbImages)
 
 	displayImages(testPath)
 
@@ -404,6 +415,53 @@ func getImagePath() string {
 // return nil
 // }
 
+func discoverImages(db *sql.DB) (bool, error) {
+	userHome, err := os.UserHomeDir()
+	if err != nil {
+		return false, fmt.Errorf("error getting user home directory: %w", err)
+	}
+
+	directories := []string{
+		// filepath.Join(userHome, "Pictures"),
+		// filepath.Join(userHome, "Documents"),
+		// filepath.Join(userHome, "Desktop"),
+		// filepath.Join(userHome, "Downloads"),
+		// filepath.Join(userHome, "Music"),
+		// filepath.Join(userHome, "Videos"),
+		filepath.Join(userHome),
+	}
+
+	stmt, err := db.Prepare("INSERT INTO Image (path, dateAdded) SELECT ?, DATETIME('now') WHERE NOT EXISTS (SELECT 1 FROM Image WHERE path = ?)")
+	if err != nil {
+		return false, fmt.Errorf("error preparing SQL statement: %w", err)
+	}
+	defer stmt.Close()
+
+	for _, directory := range directories {
+		err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return fmt.Errorf("error walking path %s: %w", path, err)
+			}
+			if info.IsDir() {
+				return nil
+			}
+			if isImageFileMap(path) {
+				_, err := stmt.Exec(path, path)
+				if err != nil {
+					return fmt.Errorf("error inserting image path into database: %w", err)
+				}
+				logger.Println("Image discovered")
+			}
+			return nil
+		})
+		if err != nil {
+			return false, fmt.Errorf("error walking directory %s: %w", directory, err)
+		}
+	}
+
+	return true, nil
+}
+
 // func discoverImages(db *sql.DB) (bool, error) {
 // 	userHome, _ := os.UserHomeDir()
 
@@ -444,24 +502,24 @@ func getImagePath() string {
 // 	return true, nil
 // }
 
-// func getImagesFromDatabase(db *sql.DB) ([]string, error) {
-// 	images, err := db.Query("SELECT path FROM Image")
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer images.Close()
+func getImagesFromDatabase(db *sql.DB) ([]string, error) {
+	images, err := db.Query("SELECT path FROM Image")
+	if err != nil {
+		return nil, err
+	}
+	defer images.Close()
 
-// 	var imagePaths []string
-// 	for images.Next() {
-// 		var path string
-// 		if err := images.Scan(&path); err != nil {
-// 			return nil, err
-// 		}
-// 		imagePaths = append(imagePaths, path)
-// 	}
+	var imagePaths []string
+	for images.Next() {
+		var path string
+		if err := images.Scan(&path); err != nil {
+			return nil, err
+		}
+		imagePaths = append(imagePaths, path)
+	}
 
-// 	return imagePaths, nil
-// }
+	return imagePaths, nil
+}
 
 func createDisplayImagesFunction(db *sql.DB, w fyne.Window, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App, mainContainer *fyne.Container) func(string) {
 	return func(dir string) {
@@ -508,9 +566,49 @@ func createDisplayImagesFunction(db *sql.DB, w fyne.Window, sidebar *fyne.Contai
 		go func() {
 			wg.Wait()
 
-			// add content to container instead of window
-			// mainContainer.Add(content)
-			// w.SetContent(content) // this shit fixes the problem
+			// images finished loading so stop & remove loading bar & loading message
+			loadingIndicator.Stop()
+			content.Remove(loadingMessage)
+			content.Remove(loadingIndicator)
+			// refresh the container that contains images
+			canvas.Refresh(content)
+		}()
+	}
+}
+
+func createDisplayImagesFunctionFromDb(db *sql.DB, w fyne.Window, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App, mainContainer *fyne.Container, files []string) func(string) {
+	return func(dir string) {
+		// make a grid to display images
+		imageContainer := container.NewAdaptiveGrid(5) // default value 4
+		// create a loading bar & start it
+		loadingIndicator := widget.NewProgressBarInfinite()
+		loadingIndicator.Start()
+		// create a loading message
+		loadingMessage := widget.NewLabel("Loading images...")
+		content := container.NewVBox(loadingIndicator, loadingMessage, imageContainer)
+		// content := container.NewGridWithRows(3, loadingIndicator, loadingMessage, imageContainer)
+		// still loading so display loading message and bar
+		mainContainer.Add(content)
+
+		var wg sync.WaitGroup
+		semaphore := make(chan struct{}, runtime.NumCPU())
+
+		// loop through images
+		for _, file := range files {
+			wg.Add(1)
+			go func(path string) {
+				defer wg.Done()
+				semaphore <- struct{}{}
+				defer func() { <-semaphore }()
+
+				// display image
+				displayImage(db, w, path, imageContainer, sidebar, sidebarScroll, split, a)
+			}(file)
+
+		}
+
+		go func() {
+			wg.Wait()
 
 			// images finished loading so stop & remove loading bar & loading message
 			loadingIndicator.Stop()
