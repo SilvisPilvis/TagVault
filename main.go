@@ -232,12 +232,14 @@ func main() {
 	a.Settings().SetTheme(&defaultTheme{})
 
 	// walk trough all directories and if image add to db
+	logger.Println("Before: ", getImageCount(db))
 	_, err := discoverImages(db)
 	if err != nil {
 		// dialog.ShowError(err, w)
 		// return
 		logger.Fatalln("Error discovering images:", err)
 	}
+	logger.Println("After: ", getImageCount(db))
 
 	content := container.NewVBox()
 	scroll := container.NewVScroll(content)
@@ -450,7 +452,8 @@ func discoverImages(db *sql.DB) (bool, error) {
 				if err != nil {
 					return fmt.Errorf("error inserting image path into database: %w", err)
 				}
-				logger.Println("Image discovered")
+				// logger.Println("Image discovered")
+				// logger.Println("Insert success:", insertSuccess)
 			}
 			return nil
 		})
@@ -460,6 +463,16 @@ func discoverImages(db *sql.DB) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func getImageCount(db *sql.DB) int {
+	var imgCount int
+	count, err := db.Query("SELECT COUNT(*) DISTINCT FROM Image;")
+	if err != nil {
+		logger.Println("Error getting image count:", err)
+	}
+	count.Scan(&imgCount)
+	return imgCount
 }
 
 // func discoverImages(db *sql.DB) (bool, error) {
