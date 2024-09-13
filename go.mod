@@ -4,8 +4,9 @@ go 1.23.0
 
 require (
 	fyne.io/fyne/v2 v2.5.1
-	github.com/grafana/pyroscope-go v1.1.2
+	github.com/grafana/pyroscope-go v1.2.0
 	github.com/mattn/go-sqlite3 v1.14.23
+	github.com/stretchr/testify v1.9.0
 	golang.org/x/image v0.20.0
 )
 
@@ -36,7 +37,6 @@ require (
 	github.com/rymdport/portal v0.2.6 // indirect
 	github.com/srwiley/oksvg v0.0.0-20221011165216-be6e8873101c // indirect
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
-	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/yuin/goldmark v1.7.4 // indirect
 	golang.org/x/mobile v0.0.0-20240909163608-642950227fb3 // indirect
 	golang.org/x/net v0.29.0 // indirect

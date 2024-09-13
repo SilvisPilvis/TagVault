@@ -386,7 +386,8 @@ func getImagePath() string {
 	// userHome + "/Music/"
 	// userHome + "/Videos/"
 	if runtime.GOOS == "linux" {
-		return userHome + "/Pictures/"
+		// return userHome + "/Pictures/"
+		return userHome + "/Attēli/wallpapers/"
 	}
 	return `C:\Users\Silvestrs\Desktop\test`
 }
@@ -1439,40 +1440,40 @@ func getThemeColor(t fyne.Theme, prop string) color.Color {
 	}
 }
 
-func setThemeColor(t fyne.Theme, prop string, c color.Color) {
-	switch prop {
-	case "BackgroundColor":
-		t.Color(fyne.ThemeColorName(prop), theme.VariantDark) // this should return c
-	case "ButtonColor":
-		t.SetColor("button", theme.VariantDark, c)
-	case "DisabledButtonColor":
-		t.SetColor("disabledButton", theme.VariantDark, c)
-	case "TextColor":
-		t.SetColor("foreground", theme.VariantDark, c)
-	case "DisabledTextColor":
-		t.SetColor("disabledForeground", theme.VariantDark, c)
-	case "IconColor":
-		t.SetColor("icon", theme.VariantDark, c)
-	case "DisabledIconColor":
-		t.SetColor("disabledIcon", theme.VariantDark, c)
-	case "PlaceHolderColor":
-		t.SetColor("placeholder", theme.VariantDark, c)
-	case "PrimaryColor":
-		t.SetColor("primary", theme.VariantDark, c)
-	case "HoverColor":
-		t.SetColor("hover", theme.VariantDark, c)
-	case "FocusColor":
-		t.SetColor("focus", theme.VariantDark, c)
-	case "ScrollBarColor":
-		t.SetColor("scrollBar", theme.VariantDark, c)
-	case "ShadowColor":
-		t.SetColor("shadow", theme.VariantDark, c)
-	case "ErrorColor":
-		t.SetColor("error", theme.VariantDark, c)
-	default:
-		return
-	}
-}
+// func setThemeColor(t fyne.Theme, prop string, c color.Color) {
+// 	switch prop {
+// 	case "BackgroundColor":
+// 		t.Color(fyne.ThemeColorName(prop), theme.VariantDark) // this should return c
+// 	case "ButtonColor":
+// 		t.SetColor("button", theme.VariantDark, c)
+// 	case "DisabledButtonColor":
+// 		t.SetColor("disabledButton", theme.VariantDark, c)
+// 	case "TextColor":
+// 		t.SetColor("foreground", theme.VariantDark, c)
+// 	case "DisabledTextColor":
+// 		t.SetColor("disabledForeground", theme.VariantDark, c)
+// 	case "IconColor":
+// 		t.SetColor("icon", theme.VariantDark, c)
+// 	case "DisabledIconColor":
+// 		t.SetColor("disabledIcon", theme.VariantDark, c)
+// 	case "PlaceHolderColor":
+// 		t.SetColor("placeholder", theme.VariantDark, c)
+// 	case "PrimaryColor":
+// 		t.SetColor("primary", theme.VariantDark, c)
+// 	case "HoverColor":
+// 		t.SetColor("hover", theme.VariantDark, c)
+// 	case "FocusColor":
+// 		t.SetColor("focus", theme.VariantDark, c)
+// 	case "ScrollBarColor":
+// 		t.SetColor("scrollBar", theme.VariantDark, c)
+// 	case "ShadowColor":
+// 		t.SetColor("shadow", theme.VariantDark, c)
+// 	case "ErrorColor":
+// 		t.SetColor("error", theme.VariantDark, c)
+// 	default:
+// 		return
+// 	}
+// }
 
 func getColorComponentString(c color.Color, component int) string {
 	r, g, b, a := c.RGBA()
@@ -1515,7 +1516,8 @@ func showColorPickerWindow(propertyName string, colorPreview *canvas.Rectangle, 
 			newColor := color.NRGBA{uint8(r.Value), uint8(g.Value), uint8(b.Value), 255}
 			colorPreviewRect.FillColor = newColor
 			colorPreview.FillColor = newColor
-			setThemeColor(currentTheme, propertyName, newColor)
+			// doesn't work
+			// setThemeColor(currentTheme, propertyName, newColor)
 			w.Content().Refresh()
 			colorPreviewRect.Refresh()
 			colorPreview.Refresh()
@@ -1539,7 +1541,8 @@ func showColorPickerWindow(propertyName string, colorPreview *canvas.Rectangle, 
 			if newColor, err := HexToColor(hex); err == nil {
 				colorPreviewRect.FillColor = newColor
 				colorPreview.FillColor = newColor
-				setThemeColor(currentTheme, propertyName, newColor)
+				// doesn't work
+				// setThemeColor(currentTheme, propertyName, newColor)
 				w.Content().Refresh()
 				colorPreviewRect.Refresh()
 				colorPreview.Refresh()
