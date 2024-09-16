@@ -148,6 +148,7 @@ func (defaultTheme) Size(s fyne.ThemeSizeName) float32 {
 
 type Options struct {
 	DatabasePath string
+	ExcludedDirs map[string]int
 	Profiling    bool
 	Timezone     int // Timezone like UTC+3 or UTC-3
 	SortDesc     bool
@@ -158,6 +159,7 @@ type Options struct {
 func (opts Options) InitDefault() *Options {
 	return &Options{
 		DatabasePath: "./index.db",
+		ExcludedDirs: map[string]int{},
 		Profiling:    false,
 		Timezone:     3,
 		SortDesc:     true,
@@ -199,6 +201,9 @@ func main() {
 	logger.Println("Check Obsidian Todo list")
 	logger.Println("Make displayImages work with getImagesFromDatabase")
 
+	options.ExcludedDirs = map[string]int{"Games": 1, "go": 1}
+	logger.Println("ExcludedDirs: ", options.ExcludedDirs)
+
 	// logger.Println("Minimize widget updates:
 	// Fyne's object tree walking is often triggered by widget updates. Try to reduce unnecessary updates by:
 
@@ -233,12 +238,41 @@ func main() {
 
 	// walk trough all directories and if image add to db
 	logger.Println("Before: ", getImageCount(db))
-	_, err := discoverImages(db)
-	if err != nil {
-		// dialog.ShowError(err, w)
-		// return
-		logger.Fatalln("Error discovering images:", err)
-	}
+
+	// discoverSuccess, err := discoverImages(db)
+	// if err != nil {
+	// 	// dialog.ShowError(err, w)
+	// 	// return
+	// 	logger.Fatalln("Error discovering images:", err)
+	// }
+	// logger.Println("Discover success: ", discoverSuccess)
+
+	// makes a channel that will be closed when the discovery is complete
+	done := make(chan bool)
+
+	// runs the discovery in the background
+	go func() {
+		_, err := discoverImages(db)
+		if err != nil {
+			logger.Println("Error discovering images:", err)
+		}
+		// sets the done channel to true
+		done <- true
+	}()
+
+	// Wait for the discovery to complete
+	<-done
+
+	// var wg sync.WaitGroup
+
+	// wg.Add(1)
+	// go func() {
+	// 	defer wg.Done()
+	// 	discoverImages(db)
+	// }()
+
+	// wg.Wait()
+
 	logger.Println("After: ", getImageCount(db))
 
 	content := container.NewVBox()
@@ -336,7 +370,7 @@ func setupDatabase() *sql.DB {
 	if err := db.Ping(); err != nil {
 		logger.Fatal("Failed to connect to database: ", err)
 	}
-	logger.Println("Connected to db!")
+	logger.Println("DB connection success!")
 
 	setupTables(db)
 	return db
@@ -371,32 +405,33 @@ func setupMainWindow(a fyne.App) fyne.Window {
 }
 
 func getImagePath() string {
-	// os.UserHomeDir()
 	userHome, _ := os.UserHomeDir()
-	// userHome + "/Pictures/"
-	// userHome + "/Documents/"
-	// userHome + "/Desktop/"
-	// userHome + "/Downloads/"
-	// userHome + "/Music/"
-	// userHome + "/Videos/"
 	if runtime.GOOS == "linux" {
-		// return userHome + "/Pictures/"
 		return userHome + "/Attēli/wallpapers/"
 	}
 	return `C:\Users\Silvestrs\Desktop\test`
 }
 
-// func discoverImages() []string {
-// var images []string
-// userHome, _ := os.UserHomeDir()
-// userHome + "/Pictures/"
-// userHome + "/Documents/"
-// userHome + "/Desktop/"
-// userHome + "/Downloads/"
-// userHome + "/Music/"
-// userHome + "/Videos/"
-// return nil
+// func isExcludedDir(dir string, blackList map[string]int) bool {
+// 	logger.Println(blackList)
+// 	// checks if the directory is blacklisted
+// 	if blackList[dir] == 1 {
+// 		return true
+// 	}
+// 	// checks if the directory is a hidden directory
+// 	return strings.HasPrefix(dir, ".")
 // }
+
+func isExcludedDir(dir string, blackList map[string]int) bool {
+	// checks if the directory is blacklisted
+	for key := range blackList {
+		if strings.Contains(dir, key) {
+			return true
+		}
+	}
+	// checks if the directory is a hidden directory
+	return strings.HasPrefix(dir, ".")
+}
 
 func discoverImages(db *sql.DB) (bool, error) {
 	userHome, err := os.UserHomeDir()
@@ -404,13 +439,11 @@ func discoverImages(db *sql.DB) (bool, error) {
 		return false, fmt.Errorf("error getting user home directory: %w", err)
 	}
 
+	var count int = 0
+
+	logger.Println("Discovery started.")
+
 	directories := []string{
-		// filepath.Join(userHome, "Pictures"),
-		// filepath.Join(userHome, "Documents"),
-		// filepath.Join(userHome, "Desktop"),
-		// filepath.Join(userHome, "Downloads"),
-		// filepath.Join(userHome, "Music"),
-		// filepath.Join(userHome, "Videos"),
 		filepath.Join(userHome),
 	}
 
@@ -425,16 +458,17 @@ func discoverImages(db *sql.DB) (bool, error) {
 			if err != nil {
 				return fmt.Errorf("error walking path %s: %w", path, err)
 			}
-			if info.IsDir() {
-				return nil
+			if info.IsDir() && isExcludedDir(path, options.ExcludedDirs) {
+				logger.Println("Skipping hidden directory: ", info.Name())
+				return filepath.SkipDir
 			}
 			if isImageFileMap(path) {
 				_, err := stmt.Exec(path, path)
 				if err != nil {
 					return fmt.Errorf("error inserting image path into database: %w", err)
 				}
-				// logger.Println("Image discovered")
-				// logger.Println("Insert success:", insertSuccess)
+				count++
+				logger.Println("Added an image.")
 			}
 			return nil
 		})
@@ -443,12 +477,14 @@ func discoverImages(db *sql.DB) (bool, error) {
 		}
 	}
 
+	logger.Println("Discovery Complete. Added: ", count, "images")
+
 	return true, nil
 }
 
 func getImageCount(db *sql.DB) int {
 	var imgCount int
-	count, err := db.Query("SELECT COUNT(*) DISTINCT FROM Image;")
+	count, err := db.Query("SELECT DISTINCT count(id) FROM Image;")
 	if err != nil {
 		logger.Println("Error getting image count:", err)
 	}
