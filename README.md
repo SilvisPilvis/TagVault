@@ -7,6 +7,7 @@ This app includes many cool features such as:
  - Loading bar
  - Image loading in the background
  - Ability to add multiple tags to single image
+ - Ability to blacklist files and folders
 
 ## App Demo Images:
 ### Default app state
