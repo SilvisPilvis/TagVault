@@ -3,6 +3,8 @@ package main
 import (
 	"testing"
 
+	"strings"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/test"
@@ -10,9 +12,10 @@ import (
 )
 
 var (
-	t       *testing.T
-	testApp = test.NewApp()
-	window  = setupMainWindowTest(testApp, t)
+	t         *testing.T
+	testApp   = test.NewApp()
+	window    = setupMainWindowTest(testApp, t)
+	blackList = map[string]int{"go": 1, "Games": 1, "games": 1}
 )
 
 func TestMainWindowCreation(t *testing.T) {
@@ -56,6 +59,28 @@ func TestWindowContent(t *testing.T) {
 func TestWindowTitle(t *testing.T) {
 	// Check the window title
 	assert.Equal(t, "Tag Vault", window.Title(), "Incorrect window title")
+}
+
+func TestDirectoryExclusionHidden(t *testing.T) {
+	// Check the window title
+	assert.True(t, isExcludedDir("/home/amaterasu/.cache", blackList), "Hidden Directory is not excluded")
+}
+
+func TestDirectoryExclusionBlacklist(t *testing.T) {
+	// Check the window title
+	assert.True(t, isExcludedDir("/home/amaterasu/go", blackList), "Blacklisted Directory is not excluded")
+}
+
+func isExcludedDir(dir string, blackList map[string]int) bool {
+	// checks if the directory is blacklisted
+	for key := range blackList {
+		if strings.Contains(dir, key) {
+			return true
+		}
+	}
+	// checks if the directory is a hidden directory
+	// return strings.HasPrefix(dir, ".")
+	return strings.Contains(dir, ".")
 }
 
 func setupMainWindowTest(a fyne.App, t *testing.T) fyne.Window {

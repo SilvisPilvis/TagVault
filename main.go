@@ -201,7 +201,7 @@ func main() {
 	logger.Println("Check Obsidian Todo list")
 	logger.Println("Make displayImages work with getImagesFromDatabase")
 
-	options.ExcludedDirs = map[string]int{"Games": 1, "go": 1}
+	options.ExcludedDirs = map[string]int{"Games": 1, "games": 1, "go": 1}
 	logger.Println("ExcludedDirs: ", options.ExcludedDirs)
 
 	// logger.Println("Minimize widget updates:
@@ -251,6 +251,7 @@ func main() {
 	done := make(chan bool)
 
 	// runs the discovery in the background
+	// Discovery using goroutine
 	go func() {
 		_, err := discoverImages(db)
 		if err != nil {
@@ -260,9 +261,10 @@ func main() {
 		done <- true
 	}()
 
-	// Wait for the discovery to complete
-	<-done
+	// // Wait for the discovery to complete
+	// <-done
 
+	// Discovery using waitgroup
 	// var wg sync.WaitGroup
 
 	// wg.Add(1)
@@ -429,8 +431,10 @@ func isExcludedDir(dir string, blackList map[string]int) bool {
 			return true
 		}
 	}
-	// checks if the directory is a hidden directory
-	return strings.HasPrefix(dir, ".")
+	// checks if the directory (not the full path so useless) is a hidden directory
+	// return strings.HasPrefix(dir, ".")
+	// checks if the path is a hidden directory
+	return strings.Contains(dir, ".")
 }
 
 func discoverImages(db *sql.DB) (bool, error) {
@@ -459,7 +463,7 @@ func discoverImages(db *sql.DB) (bool, error) {
 				return fmt.Errorf("error walking path %s: %w", path, err)
 			}
 			if info.IsDir() && isExcludedDir(path, options.ExcludedDirs) {
-				logger.Println("Skipping hidden directory: ", info.Name())
+				// logger.Println("Skipping hidden directory: ", info.Name())
 				return filepath.SkipDir
 			}
 			if isImageFileMap(path) {
