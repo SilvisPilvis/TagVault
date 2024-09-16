@@ -258,21 +258,6 @@ func main() {
 	input := widget.NewEntry()
 	input.SetPlaceHolder("Enter a Tag to Search by")
 
-	// form := &widget.Form{
-	// 	Items: []*widget.FormItem{{Text: "Tag", Widget: input}},
-	// 	OnSubmit: func() {
-	// 		tagName := input.Text
-	// 		// imagePaths, err := searchImagesByTag(db, tagName)
-	// 		imagePaths, err := getImagePathsByTag(db, "%"+tagName+"%")
-	// 		if err != nil {
-	// 			fmt.Print("searchImagesByTag")
-	// 			dialog.ShowError(err, w)
-	// 			return
-	// 		}
-	// 		updateContentWithSearchResults(content, imagePaths, db, w, sidebar, sidebarScroll, split, a)
-	// 	},
-	// }
-
 	form := widget.NewEntry()
 	form.SetPlaceHolder("Enter a Tag to Search by")
 	form.OnChanged = func(s string) {
@@ -301,7 +286,6 @@ func main() {
 	filterButton.Icon = loadFilterButton
 
 	optContainer := container.NewAdaptiveGrid(2, filterButton, settingsButton)
-	// tempContainer := container.NewVBox(optContainer, form)
 
 	// controls := container.NewBorder(nil, nil, nil, settingsButton, form)
 	controls := container.NewBorder(nil, nil, nil, optContainer, form)
@@ -315,9 +299,6 @@ func main() {
 	displayImages := createDisplayImagesFunctionFromDb(db, w, sidebar, sidebarScroll, split, a, mainContainer, dbImages)
 
 	displayImages(testPath)
-
-	// controls := container.NewBorder(nil, nil, nil, nil, form)
-	// mainContainer := container.NewBorder(controls, nil, nil, nil, split)
 
 	w.SetContent(mainContainer)
 	w.ShowAndRun()
