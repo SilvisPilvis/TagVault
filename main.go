@@ -464,6 +464,7 @@ func discoverImages(db *sql.DB) (bool, error) {
 			}
 			if info.IsDir() && isExcludedDir(path, options.ExcludedDirs) {
 				// logger.Println("Skipping hidden directory: ", info.Name())
+				// Skip path if path is a hidden dir or in excluded dirs
 				return filepath.SkipDir
 			}
 			if isImageFileMap(path) {
@@ -1290,6 +1291,21 @@ func showSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 		},
 	}
 
+	blackList := widget.NewList(
+		func() int {
+			return len(options.ExcludedDirs)
+		},
+		func() fyne.CanvasObject {
+			return widget.NewLabel("Excluded directory")
+		},
+		func(id widget.ListItemID, item fyne.CanvasObject) {
+			for excluded := range options.ExcludedDirs {
+				label := item.(*widget.Label)
+				label.SetText(excluded)
+			}
+		},
+	)
+
 	// Create a list of all tags
 	tagList := widget.NewList(
 		func() int {
@@ -1324,6 +1340,8 @@ func showSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 	// Create a container for the settings content
 	content := container.NewVBox(
 		dbPathForm,
+		widget.NewLabel("Excluded directories"),
+		blackList,
 		widget.NewLabel("Tags"),
 		tagList,
 		timeZone,
