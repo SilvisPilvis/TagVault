@@ -38,7 +38,7 @@ func setupTables(db *sql.DB) {
 		"CREATE TABLE IF NOT EXISTS `Image`(`id` INTEGER PRIMARY KEY NOT NULL, `path` VARCHAR(1024) NOT NULL, `dateAdded` DATETIME NOT NULL);",
 		"CREATE INDEX IF NOT EXISTS idx_image_path ON Image(path);",
 		"CREATE TABLE IF NOT EXISTS `ImageTag`(`imageId` INTEGER NOT NULL, `tagId` INTEGER NOT NULL);",
-		"CREATE TABLE IF NOT EXISTS `Options`(`dbPath` VARCHAR(255) NOT NULL, `timezone` VARCHAR(1024) NOT NULL, `sortDesc` BOOLEAN);",
+		"CREATE TABLE IF NOT EXISTS `Options`(`dbPath` VARCHAR(255) NOT NULL, `excludedDirs` VARCHAR(255) NOT NULL, `timezone` VARCHAR(1024) NOT NULL, `sortDesc` BOOLEAN, `useRGB` BOOLEAN, `imageNumber` INTEGER NOT NULL, `thumbnailSize` NOT NULL);",
 	}
 	for _, table := range tables {
 		if _, err := db.Exec(table); err != nil {

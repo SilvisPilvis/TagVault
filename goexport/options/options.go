@@ -1,7 +1,9 @@
 package options
 
 import (
-	"os"
+	"database/sql"
+	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"strings"
 )
@@ -43,19 +45,88 @@ func (opts Options) InitDefault() *Options {
 	}
 }
 
-func (opts Options) SaveOptions() {
-	os.OpenFile("application.options", os.O_RDWR|os.O_CREATE, 0666)
+func SaveOptionsToDB(db *sql.DB, options *Options) error {
+	// Convert map and slice to JSON for storage
+	excludedDirsJSON, err := json.Marshal(options.ExcludedDirs)
+	if err != nil {
+		return fmt.Errorf("error marshaling ExcludedDirs: %v", err)
+	}
+
+	exifFieldsJSON, err := json.Marshal(options.ExifFields)
+	if err != nil {
+		return fmt.Errorf("error marshaling ExifFields: %v", err)
+	}
+
+	// Prepare SQL statement
+	stmt, err := db.Prepare(`
+		INSERT OR REPLACE INTO options (
+			DatabasePath, ExcludedDirs, Profiling, Timezone, SortDesc, 
+			UseRGB, ExifFields, ImageNumber, ThumbnailSize
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`)
+	if err != nil {
+		return fmt.Errorf("error preparing statement: %v", err)
+	}
+	defer stmt.Close()
+
+	// Execute SQL statement
+	_, err = stmt.Exec(
+		options.DatabasePath,
+		string(excludedDirsJSON),
+		options.Profiling,
+		options.Timezone,
+		options.SortDesc,
+		options.UseRGB,
+		string(exifFieldsJSON),
+		options.ImageNumber,
+		options.ThumbnailSize,
+	)
+	if err != nil {
+		return fmt.Errorf("error executing statement: %v", err)
+	}
+
+	return nil
 }
 
-func (opts Options) LoadOptions() *Options {
-	return &Options{
-		DatabasePath: "./index.db",
-		ExcludedDirs: map[string]int{},
-		Profiling:    false,
-		Timezone:     3,
-		SortDesc:     true,
-		UseRGB:       false,
-		ExifFields:   []string{"DateTime"},
-		ImageNumber:  20,
+func LoadOptionsFromDB(db *sql.DB) (*Options, error) {
+	options := &Options{}
+
+	row := db.QueryRow(`
+		SELECT DatabasePath, ExcludedDirs, Profiling, Timezone, SortDesc, 
+			   UseRGB, ExifFields, ImageNumber, ThumbnailSize
+		FROM options LIMIT 1
+	`)
+
+	var excludedDirsJSON, exifFieldsJSON string
+
+	err := row.Scan(
+		&options.DatabasePath,
+		&excludedDirsJSON,
+		&options.Profiling,
+		&options.Timezone,
+		&options.SortDesc,
+		&options.UseRGB,
+		&exifFieldsJSON,
+		&options.ImageNumber,
+		&options.ThumbnailSize,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return options, nil // Return default options if no row found
+		}
+		return nil, fmt.Errorf("error scanning row: %v", err)
 	}
+
+	// Unmarshal JSON data
+	err = json.Unmarshal([]byte(excludedDirsJSON), &options.ExcludedDirs)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshaling ExcludedDirs: %v", err)
+	}
+
+	err = json.Unmarshal([]byte(exifFieldsJSON), &options.ExifFields)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshaling ExifFields: %v", err)
+	}
+
+	return options, nil
 }

@@ -406,7 +406,7 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 
 	resourceChan := make(chan fyne.Resource, 1)
 
-	// claude ai
+	// claude ai solution to load images in bg
 	go func() {
 		// load the image as a fyne resource
 		resource, err := loadImageResourceThumbnailEfficient(path)
@@ -445,8 +445,7 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	fullImg.SetMinSize(fyne.NewSize(200, 200))
 	paddedImg := container.NewPadded(fullImg)
 
-	// fullLabel := widget.NewLabel(filepath.Base(path))
-	fullLabel := widget.NewLabel(truncateFilename(filepath.Base(path), 10))
+	fullLabel := widget.NewLabel(truncateFilename(filepath.Base(path), 20))
 	fullLabel.Wrapping = fyne.TextWrapWord
 
 	dateAdded := widget.NewLabel("Date Added: " + database.GetDate(db, path))
@@ -467,10 +466,7 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 		showCreateTagWindow(a, w, db)
 	})
 
-	// sidebar.Add(fullImg)
 	sidebar.Add(paddedImg)
-	// sidebar.Add(fullLabel)
-	// sidebar.Add(dateAdded)
 	sidebar.Add(container.NewGridWithRows(3, dateAdded, fullLabel, fileType))
 	sidebar.Add(tagDisplay)
 	sidebar.Add(container.NewPadded(container.NewGridWithColumns(2, addTagButton, createTagButton)))
@@ -654,10 +650,10 @@ func truncateFilename(filename string, maxLength int) string {
 	nameWithoutExt := filename[:len(filename)-len(ext)]
 	// if filename without extension is bigger or equal to maxLength, return filename with extension
 	if len(nameWithoutExt) <= maxLength {
-		return filename
+		return nameWithoutExt
 	} else {
 		// return nameWithoutExt[:maxLength] + ext
-		return nameWithoutExt[:maxLength]
+		return nameWithoutExt[:maxLength] + "..."
 	}
 }
 
