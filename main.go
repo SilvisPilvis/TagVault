@@ -14,6 +14,7 @@ import (
 	"main/goexport/logger"
 	"main/goexport/options"
 	"main/goexport/profiling"
+	"strings"
 
 	// "main/goexport/fynecomponents/imgbtn"
 
@@ -417,7 +418,6 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 		}
 
 		// set the image button image to the resource
-		// appLogger.Println("Resource image not empty.", resource.Content()[:16])
 		imgButton.image.Resource = resource
 		canvas.Refresh(imgButton)
 		resourceChan <- resource
@@ -430,7 +430,6 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 	}
 
 	// make a parent container to hold the image button and label
-	// imageTile := container.NewVBox(container.NewPadded(imgButton), label)
 	imageTile := container.NewVBox(container.NewPadded(imgButton))
 	imageContainer.Add(imageTile)
 }
@@ -453,6 +452,10 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	dateAdded := widget.NewLabel("Date Added: " + database.GetDate(db, path))
 	dateAdded.Wrapping = fyne.TextWrapWord
 
+	ext := filepath.Ext(path)
+	fileType := widget.NewLabel("Type: " + strings.ToUpper(ext[1:]))
+	fileType.Wrapping = fyne.TextWrapWord
+
 	imageId := database.GetImageId(db, path)
 	tagDisplay := createTagDisplay(db, imageId)
 
@@ -468,16 +471,22 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	sidebar.Add(paddedImg)
 	// sidebar.Add(fullLabel)
 	// sidebar.Add(dateAdded)
-	sidebar.Add(container.NewGridWithRows(2, dateAdded, fullLabel))
+	sidebar.Add(container.NewGridWithRows(3, dateAdded, fullLabel, fileType))
 	sidebar.Add(tagDisplay)
 	sidebar.Add(container.NewPadded(container.NewGridWithColumns(2, addTagButton, createTagButton)))
 
 	// Show sidebar if hidden else show
+	// if sidebarScroll.Visible() {
+	// sidebarScroll.Hide()
+	// split.Offset = 0
+	// } else {
+	// sidebarScroll.Show()
+	// split.Offset = 0.65 // was 0.7 by default
+	// }
 	sidebarScroll.Show()
+	split.Offset = 0.65
 	imageContainer.Refresh()
 	tagDisplay.Refresh()
-	sidebar.Show()
-	split.Offset = 0.65 // was 0.7 by default
 	sidebar.Refresh()
 }
 
@@ -647,7 +656,8 @@ func truncateFilename(filename string, maxLength int) string {
 	if len(nameWithoutExt) <= maxLength {
 		return filename
 	} else {
-		return nameWithoutExt[:maxLength] + ext
+		// return nameWithoutExt[:maxLength] + ext
+		return nameWithoutExt[:maxLength]
 	}
 }
 

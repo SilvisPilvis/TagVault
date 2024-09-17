@@ -205,7 +205,7 @@ func DiscoverImages(db *sql.DB, blacklist map[string]int) (bool, error) {
 				}
 				count++
 			}
-			appLogger.Println("File not an image: ", path)
+			appLogger.Println("File not image or already in db:\n", path)
 			return nil
 		})
 		if err != nil {
