@@ -10,14 +10,14 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-type imageButton struct {
+type ImageButton struct {
 	widget.BaseWidget
 	onTapped func()
 	image    *canvas.Image
 }
 
-func newImageButton(resource fyne.Resource, tapped func()) *imageButton {
-	img := &imageButton{onTapped: tapped}
+func NewImageButton(resource fyne.Resource, tapped func()) *ImageButton {
+	img := &ImageButton{onTapped: tapped}
 	img.ExtendBaseWidget(img)
 	img.image = canvas.NewImageFromResource(resource)
 	img.image.FillMode = canvas.ImageFillContain
@@ -25,11 +25,11 @@ func newImageButton(resource fyne.Resource, tapped func()) *imageButton {
 	return img
 }
 
-func (b *imageButton) CreateRenderer() fyne.WidgetRenderer {
+func (b *ImageButton) CreateRenderer() fyne.WidgetRenderer {
 	return widget.NewSimpleRenderer(b.image)
 }
 
-func (b *imageButton) Tapped(*fyne.PointEvent) {
+func (b *ImageButton) Tapped(*fyne.PointEvent) {
 	if b.onTapped != nil {
 		b.onTapped()
 	}

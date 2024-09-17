@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"database/sql"
 	"fmt"
 	"image"
@@ -23,7 +22,6 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
-	"time"
 
 	// "image/draw"
 
@@ -136,7 +134,7 @@ func (defaultTheme) Size(s fyne.ThemeSizeName) float32 {
 	case theme.SizeNameScrollBar:
 		return 16
 	case theme.SizeNameScrollBarSmall:
-		return 3
+		return 6
 	case theme.SizeNameSeparatorThickness:
 		return 1
 	case theme.SizeNameText:
@@ -147,18 +145,6 @@ func (defaultTheme) Size(s fyne.ThemeSizeName) float32 {
 		return theme.DefaultTheme().Size(s)
 	}
 }
-
-// type CustomTheme struct {
-// 	fyne.Theme
-// }
-
-// func (c *CustomTheme) NewCustomTheme() fyne.Theme {
-// 	return &CustomTheme{}
-// }
-
-// func (c *CustomTheme) Color(n fyne.ThemeColorName, v fyne.ThemeVariant) color.Color {
-// 	return theme.DefaultTheme().Color(n, v)
-// }
 
 var (
 	resourceCache sync.Map
@@ -179,6 +165,7 @@ func main() {
 	appLogger.Println("Make displayImages work with getImagesFromDatabase")
 
 	appOptions.ExcludedDirs = map[string]int{"Games": 1, "games": 1, "go": 1, "TagVault": 1}
+	appLogger.Println("ExcludedDirsLen: ", len(appOptions.ExcludedDirs))
 	appLogger.Println("ExcludedDirs: ", appOptions.ExcludedDirs)
 	appLogger.Println("If there are no images in the directory then add the highest directory that contains images to the ExcludedDirs list")
 
@@ -223,7 +210,8 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		discoverImages(db)
+		// discoverImages(db)
+		database.DiscoverImages(db, appOptions.ExcludedDirs)
 	}()
 
 	wg.Wait()
@@ -309,63 +297,6 @@ func getImagePath() string {
 		return userHome + "/Attēli/wallpapers/"
 	}
 	return `C:\Users\Silvestrs\Desktop\test`
-}
-
-func discoverImages(db *sql.DB) (bool, error) {
-	userHome, err := os.UserHomeDir()
-	if err != nil {
-		return false, fmt.Errorf("error getting user home directory: %w", err)
-	}
-
-	var count int = 0
-
-	appLogger.Println("Discovery started.")
-
-	directories := []string{
-		filepath.Join(userHome),
-	}
-
-	appLogger.Println("Home dir: ", directories)
-
-	// adds context so we can cancel the operation
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	appLogger.Println("Created timeout context")
-	stmt, err := db.PrepareContext(ctx, "INSERT INTO Image (path, dateAdded) SELECT ?, DATETIME('now') WHERE NOT EXISTS (SELECT 1 FROM Image WHERE path = ?)")
-	if err != nil {
-		return false, fmt.Errorf("error preparing SQL statement: %w", err)
-	}
-	defer stmt.Close()
-	appLogger.Println("Prepared successfully")
-
-	for _, directory := range directories {
-		err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return fmt.Errorf("error walking path %s: %w", path, err)
-			}
-			if info.IsDir() && options.IsExcludedDir(path, appOptions.ExcludedDirs) {
-				appLogger.Println("Skipping hidden/exluded directory: ", info.Name())
-				// Skip path if path is a hidden dir or in excluded dirs
-				return filepath.SkipDir
-			}
-			if fileutils.IsImageFileMap(path) {
-				_, err := stmt.Exec(path, path)
-				if err != nil {
-					return fmt.Errorf("error inserting image path into database: %w", err)
-				}
-				count++
-			}
-			appLogger.Println("File not an image: ", path)
-			return nil
-		})
-		if err != nil {
-			return false, fmt.Errorf("error walking directory %s: %w", directory, err)
-		}
-	}
-
-	appLogger.Println("Discovery Complete. Added or Discovered ", count, " new images.")
-
-	return true, nil
 }
 
 func createDisplayImagesFunction(db *sql.DB, w fyne.Window, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App, mainContainer *fyne.Container) func(string) {
@@ -470,6 +401,7 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 	// create a placeholder image
 	placeholderResource := fyne.NewStaticResource("placeholder", []byte{})
 	imgButton := newImageButton(placeholderResource, nil)
+	// imgButton := imgbtn.NewImageButton(placeholderResource, nil)
 
 	resourceChan := make(chan fyne.Resource, 1)
 
@@ -540,6 +472,7 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	sidebar.Add(tagDisplay)
 	sidebar.Add(container.NewPadded(container.NewGridWithColumns(2, addTagButton, createTagButton)))
 
+	// Show sidebar if hidden else show
 	sidebarScroll.Show()
 	imageContainer.Refresh()
 	tagDisplay.Refresh()
@@ -914,6 +847,7 @@ func showSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 	dbPathEntry := widget.NewEntry()
 	dbPathEntry.SetText(appOptions.DatabasePath) // Set current path
 
+	// Create a form to change the index database location
 	dbPathForm := &widget.Form{
 		Items: []*widget.FormItem{
 			{Text: "Database Path", Widget: dbPathEntry},
@@ -925,9 +859,10 @@ func showSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 		},
 	}
 
+	// Create a list of all excluded directories
 	blackList := widget.NewList(
 		func() int {
-			return len(appOptions.ExcludedDirs) - 1
+			return len(appOptions.ExcludedDirs)
 		},
 		func() fyne.CanvasObject {
 			return widget.NewLabel("Excluded directory")

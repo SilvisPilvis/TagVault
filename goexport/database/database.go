@@ -1,8 +1,15 @@
 package database
 
 import (
+	"context"
 	"database/sql"
+	"fmt"
+	"main/goexport/fileutils"
 	"main/goexport/logger"
+	"main/goexport/options"
+	"os"
+	"path/filepath"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -152,6 +159,63 @@ func SearchImagesByTag(db *sql.DB, tagName string) ([]string, error) {
 	}
 
 	return imagePaths, nil
+}
+
+func DiscoverImages(db *sql.DB, blacklist map[string]int) (bool, error) {
+	userHome, err := os.UserHomeDir()
+	if err != nil {
+		return false, fmt.Errorf("error getting user home directory: %w", err)
+	}
+
+	var count int = 0
+
+	appLogger.Println("Discovery started.")
+
+	directories := []string{
+		filepath.Join(userHome),
+	}
+
+	appLogger.Println("Home dir: ", directories)
+
+	// adds context so we can cancel the operation
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	appLogger.Println("Created timeout context")
+	stmt, err := db.PrepareContext(ctx, "INSERT INTO Image (path, dateAdded) SELECT ?, DATETIME('now') WHERE NOT EXISTS (SELECT 1 FROM Image WHERE path = ?)")
+	if err != nil {
+		return false, fmt.Errorf("error preparing SQL statement: %w", err)
+	}
+	defer stmt.Close()
+	appLogger.Println("Prepared successfully")
+
+	for _, directory := range directories {
+		err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return fmt.Errorf("error walking path %s: %w", path, err)
+			}
+			if info.IsDir() && options.IsExcludedDir(path, blacklist) {
+				appLogger.Println("Skipping hidden/exluded directory: ", info.Name())
+				// Skip path if path is a hidden dir or in excluded dirs
+				return filepath.SkipDir
+			}
+			if fileutils.IsImageFileMap(path) {
+				_, err := stmt.Exec(path, path)
+				if err != nil {
+					return fmt.Errorf("error inserting image path into database: %w", err)
+				}
+				count++
+			}
+			appLogger.Println("File not an image: ", path)
+			return nil
+		})
+		if err != nil {
+			return false, fmt.Errorf("error walking directory %s: %w", directory, err)
+		}
+	}
+
+	appLogger.Println("Discovery Complete. Added or Discovered ", count, " new images.")
+
+	return true, nil
 }
 
 // Add a function to remove a tag from an image
