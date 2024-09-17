@@ -165,6 +165,12 @@ func main() {
 	appLogger.Println("Check Obsidian Todo list")
 	appLogger.Println("Make displayImages work with getImagesFromDatabase")
 
+	optionsExist, err := options.CheckOptionsExists(db)
+	if err != nil {
+		appLogger.Println(err)
+	}
+	appLogger.Println("Do options exist? ", optionsExist)
+
 	appOptions.ExcludedDirs = map[string]int{"Games": 1, "games": 1, "go": 1, "TagVault": 1} // try to add filepath.Base(os.Getwd()): 1
 	appLogger.Println("ExcludedDirsLen: ", len(appOptions.ExcludedDirs))
 	appLogger.Println("ExcludedDirs: ", appOptions.ExcludedDirs)

@@ -45,6 +45,18 @@ func (opts Options) InitDefault() *Options {
 	}
 }
 
+func CheckOptionsExists(db *sql.DB) (bool, error) {
+
+	// Execute SQL statement
+	rows, err := db.Query("SELECT * FROM options;")
+	if err != nil {
+		return false, fmt.Errorf("error executing statement: %v", err)
+	}
+	defer rows.Close()
+
+	return rows.Next(), nil
+}
+
 func SaveOptionsToDB(db *sql.DB, options *Options) error {
 	// Convert map and slice to JSON for storage
 	excludedDirsJSON, err := json.Marshal(options.ExcludedDirs)
