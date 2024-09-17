@@ -1,6 +1,7 @@
-package main
+package main_test
 
 import (
+	"path/filepath"
 	"testing"
 
 	"strings"
@@ -78,9 +79,11 @@ func isExcludedDir(dir string, blackList map[string]int) bool {
 			return true
 		}
 	}
-	// checks if the directory is a hidden directory
+	// checks if the directory (not the full path so useless) is a hidden directory
 	// return strings.HasPrefix(dir, ".")
-	return strings.Contains(dir, ".")
+	// checks if the path is a hidden directory
+	// Claude solution
+	return strings.HasPrefix(filepath.Base(dir), ".")
 }
 
 func setupMainWindowTest(a fyne.App, t *testing.T) fyne.Window {
@@ -89,8 +92,6 @@ func setupMainWindowTest(a fyne.App, t *testing.T) fyne.Window {
 
 	w.SetContent(container.NewPadded())
 	w.Resize(fyne.NewSize(1000, 600))
-
-	// ... rest of your setup code ...
 
 	return w
 }

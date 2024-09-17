@@ -9,13 +9,19 @@ import (
 	"image/color"
 	"image/jpeg"
 	"image/png"
-	"log"
-	"math"
+	"main/goexport/colorutils"
+	"main/goexport/database"
+	"main/goexport/fileutils"
+	"main/goexport/logger"
+	"main/goexport/options"
+	"main/goexport/profiling"
+
+	// "main/goexport/fynecomponents/imgbtn"
+
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -30,9 +36,6 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-
-	"github.com/grafana/pyroscope-go"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type imageButton struct {
@@ -68,8 +71,6 @@ func (defaultTheme) Color(c fyne.ThemeColorName, v fyne.ThemeVariant) color.Colo
 	switch c {
 	case theme.ColorNameBackground:
 		return color.NRGBA{R: 0x04, G: 0x10, B: 0x11, A: 0xff}
-	// case theme.ColorNameButton:
-	// 	return color.Alpha16{R: 0x95, G: 0xdd, B: 0xe9, A: 0xff}
 	case theme.ColorNameButton:
 		return color.NRGBA{R: 0x9e, G: 0xbd, B: 0xff, A: 0xff}
 	case theme.ColorNameDisabledButton:
@@ -147,30 +148,6 @@ func (defaultTheme) Size(s fyne.ThemeSizeName) float32 {
 	}
 }
 
-type Options struct {
-	DatabasePath string
-	ExcludedDirs map[string]int
-	Profiling    bool
-	Timezone     int // Timezone like UTC+3 or UTC-3
-	SortDesc     bool
-	UseRGB       bool
-	ExifFields   []string // exif fields to display in the sidebar
-	ImageNumber  uint
-}
-
-func (opts Options) InitDefault() *Options {
-	return &Options{
-		DatabasePath: "./index.db",
-		ExcludedDirs: map[string]int{},
-		Profiling:    false,
-		Timezone:     3,
-		SortDesc:     true,
-		UseRGB:       false,
-		ExifFields:   []string{"DateTime"},
-		ImageNumber:  20,
-	}
-}
-
 // type CustomTheme struct {
 // 	fyne.Theme
 // }
@@ -184,30 +161,28 @@ func (opts Options) InitDefault() *Options {
 // }
 
 var (
-	imageTypes = map[string]struct{}{
-		".jpg": {}, ".png": {}, ".jpeg": {}, ".gif": {}, ".bmp": {}, ".ico": {},
-	}
 	resourceCache sync.Map
-	logger        *log.Logger
-	options       = new(Options).InitDefault()
+	appOptions    = new(options.Options).InitDefault()
+	appLogger     = logger.InitLogger()
 )
 
-const thumbnailSize = 256
-
 func main() {
-	logger = log.New(os.Stdout, "", log.LstdFlags)
 
-	// setupProfiling()
-	db := setupDatabase()
+	if appOptions.Profiling {
+		profiling.SetupProfiling()
+	}
+
+	db := database.Init()
 	defer db.Close()
 
-	logger.Println("Check Obsidian Todo list")
-	logger.Println("Make displayImages work with getImagesFromDatabase")
+	appLogger.Println("Check Obsidian Todo list")
+	appLogger.Println("Make displayImages work with getImagesFromDatabase")
 
-	options.ExcludedDirs = map[string]int{"Games": 1, "games": 1, "go": 1}
-	logger.Println("ExcludedDirs: ", options.ExcludedDirs)
+	appOptions.ExcludedDirs = map[string]int{"Games": 1, "games": 1, "go": 1, "TagVault": 1}
+	appLogger.Println("ExcludedDirs: ", appOptions.ExcludedDirs)
+	appLogger.Println("If there are no images in the directory then add the highest directory that contains images to the ExcludedDirs list")
 
-	// logger.Println("Minimize widget updates:
+	// appLogger.Println("Minimize widget updates:
 	// Fyne's object tree walking is often triggered by widget updates. Try to reduce unnecessary updates by:
 
 	// Only updating widgets when their data actually changes
@@ -240,37 +215,7 @@ func main() {
 	a.Settings().SetTheme(&defaultTheme{})
 
 	// walk trough all directories and if image add to db
-	logger.Println("Before: ", getImageCount(db))
-
-	// // makes a channel that will be closed when the discovery is complete
-	// done := make(chan bool)
-
-	// // runs the discovery in the background
-	// // Discovery using goroutine
-	// go func() {
-	// 	_, err := discoverImages(db)
-	// 	if err != nil {
-	// 		logger.Println("Error discovering images:", err)
-	// 	}
-	// 	// sets the done channel to true
-	// 	done <- true
-	// }()
-
-	// // Wait for the discovery to complete
-	// <-done
-
-	// In your main function or wherever you want to start the discovery
-	// discoveryDone := startImageDiscovery(db)
-
-	// select {
-	// case <-discoveryDone:
-	// 	fmt.Println("Discovery complete")
-	// default:
-	// 	fmt.Println("Discovery still in progress")
-	// }
-
-	// // When you want to wait for the discovery to complete (maybe before exiting the program)
-	// <-discoveryDone
+	appLogger.Println("Before: ", database.GetImageCount(db))
 
 	// Discovery using waitgroup
 	var wg sync.WaitGroup
@@ -303,7 +248,7 @@ func main() {
 	form := widget.NewEntry()
 	form.SetPlaceHolder("Enter a Tag to Search by")
 	form.OnChanged = func(s string) {
-		imagePaths, err := getImagePathsByTag(db, "%"+s+"%")
+		imagePaths, err := database.GetImagePathsByTag(db, "%"+s+"%")
 		if err != nil {
 			fmt.Print("searchImagesByTag")
 			dialog.ShowError(err, w)
@@ -319,7 +264,7 @@ func main() {
 
 	loadFilterButton, err := fyne.LoadResourceFromPath("./icons/filter.png")
 	if err != nil {
-		logger.Fatal(err)
+		appLogger.Fatal(err)
 	}
 	filterButton := widget.NewButton("", func() {
 		// sidebarScroll.Show()
@@ -329,15 +274,12 @@ func main() {
 
 	optContainer := container.NewAdaptiveGrid(2, filterButton, settingsButton)
 
-	// controls := container.NewBorder(nil, nil, nil, settingsButton, form)
 	controls := container.NewBorder(nil, nil, nil, optContainer, form)
-	// controls := container.NewBorder(nil, nil, nil, optContainer)
 	mainContainer := container.NewBorder(controls, nil, nil, nil, container.NewPadded(split))
-	// displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, content)
 
-	dbImages, err := getImagesFromDatabase(db, options.ImageNumber)
+	dbImages, err := database.GetImagesFromDatabase(db, appOptions.ImageNumber)
 	if err != nil {
-		logger.Fatal(err)
+		appLogger.Fatal(err)
 	}
 	displayImages := createDisplayImagesFunctionFromDb(db, w, sidebar, sidebarScroll, split, a, content, dbImages)
 	// displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, mainContainer)
@@ -347,66 +289,13 @@ func main() {
 	w.ShowAndRun()
 }
 
-func setupProfiling() {
-	runtime.SetMutexProfileFraction(5)
-	runtime.SetBlockProfileRate(5)
-	pyroscope.Start(pyroscope.Config{
-		ApplicationName: "tagvault.golang.app",
-		ServerAddress:   "http://localhost:4040",
-		Logger:          pyroscope.StandardLogger,
-		Tags:            map[string]string{"hostname": os.Getenv("HOSTNAME")},
-		ProfileTypes: []pyroscope.ProfileType{
-			pyroscope.ProfileCPU,
-			pyroscope.ProfileAllocObjects,
-			pyroscope.ProfileAllocSpace,
-			pyroscope.ProfileInuseObjects,
-			pyroscope.ProfileInuseSpace,
-			pyroscope.ProfileGoroutines,
-			pyroscope.ProfileMutexCount,
-			pyroscope.ProfileMutexDuration,
-			pyroscope.ProfileBlockCount,
-			pyroscope.ProfileBlockDuration,
-		},
-	})
-}
-
-func setupDatabase() *sql.DB {
-	db, err := sql.Open("sqlite3", "file:./index.db?_timeout=10000&_busy_timeout=10000")
-	if err != nil {
-		logger.Fatal("Failed to open database: ", err)
-	}
-	db.SetMaxOpenConns(2)
-	if err := db.Ping(); err != nil {
-		logger.Fatal("Failed to connect to database: ", err)
-	}
-	logger.Println("DB connection success!")
-
-	setupTables(db)
-	return db
-}
-
-func setupTables(db *sql.DB) {
-	tables := []string{
-		"CREATE TABLE IF NOT EXISTS `Tag`(`id` INTEGER PRIMARY KEY NOT NULL, `name` VARCHAR(255) NOT NULL, `color` VARCHAR(7) NOT NULL);",
-		"CREATE TABLE IF NOT EXISTS `Image`(`id` INTEGER PRIMARY KEY NOT NULL, `path` VARCHAR(1024) NOT NULL, `dateAdded` DATETIME NOT NULL);",
-		"CREATE INDEX IF NOT EXISTS idx_image_path ON Image(path);",
-		"CREATE TABLE IF NOT EXISTS `ImageTag`(`imageId` INTEGER NOT NULL, `tagId` INTEGER NOT NULL);",
-		"CREATE TABLE IF NOT EXISTS `Options`(`dbPath` VARCHAR(255) NOT NULL, `timezone` VARCHAR(1024) NOT NULL, `sortDesc` BOOLEAN);",
-	}
-	for _, table := range tables {
-		if _, err := db.Exec(table); err != nil {
-			logger.Fatal("Failed to create table: ", err)
-		}
-	}
-}
-
 func setupMainWindow(a fyne.App) fyne.Window {
 	w := a.NewWindow("Tag Vault")
 	w.Resize(fyne.NewSize(1000, 600))
 
 	icon, err := fyne.LoadResourceFromPath("icon.ico")
 	if err != nil {
-		logger.Fatal("Failed to load icon: ", err)
+		appLogger.Fatal("Failed to load icon: ", err)
 	}
 	a.SetIcon(icon)
 	w.SetIcon(icon)
@@ -422,20 +311,6 @@ func getImagePath() string {
 	return `C:\Users\Silvestrs\Desktop\test`
 }
 
-func isExcludedDir(dir string, blackList map[string]int) bool {
-	// checks if the directory is blacklisted
-	for key := range blackList {
-		if strings.Contains(dir, key) {
-			return true
-		}
-	}
-	// checks if the directory (not the full path so useless) is a hidden directory
-	// return strings.HasPrefix(dir, ".")
-	// checks if the path is a hidden directory
-	// Claude solution
-	return strings.HasPrefix(filepath.Base(dir), ".")
-}
-
 func discoverImages(db *sql.DB) (bool, error) {
 	userHome, err := os.UserHomeDir()
 	if err != nil {
@@ -444,44 +319,43 @@ func discoverImages(db *sql.DB) (bool, error) {
 
 	var count int = 0
 
-	logger.Println("Discovery started.")
+	appLogger.Println("Discovery started.")
 
 	directories := []string{
 		filepath.Join(userHome),
 	}
 
-	logger.Println("Home dir: ", directories)
+	appLogger.Println("Home dir: ", directories)
 
 	// adds context so we can cancel the operation
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	logger.Println("Created timeout context")
+	appLogger.Println("Created timeout context")
 	stmt, err := db.PrepareContext(ctx, "INSERT INTO Image (path, dateAdded) SELECT ?, DATETIME('now') WHERE NOT EXISTS (SELECT 1 FROM Image WHERE path = ?)")
 	if err != nil {
 		return false, fmt.Errorf("error preparing SQL statement: %w", err)
 	}
 	defer stmt.Close()
-	logger.Println("Prepared successfully")
+	appLogger.Println("Prepared successfully")
 
 	for _, directory := range directories {
 		err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return fmt.Errorf("error walking path %s: %w", path, err)
 			}
-			logger.Println("Path: ", info.Name())
-			if info.IsDir() && isExcludedDir(path, options.ExcludedDirs) {
-				logger.Println("Skipping hidden/exluded directory: ", info.Name())
+			if info.IsDir() && options.IsExcludedDir(path, appOptions.ExcludedDirs) {
+				appLogger.Println("Skipping hidden/exluded directory: ", info.Name())
 				// Skip path if path is a hidden dir or in excluded dirs
 				return filepath.SkipDir
 			}
-			if isImageFileMap(path) {
+			if fileutils.IsImageFileMap(path) {
 				_, err := stmt.Exec(path, path)
 				if err != nil {
 					return fmt.Errorf("error inserting image path into database: %w", err)
 				}
 				count++
 			}
-			logger.Println("File not an image: ", path)
+			appLogger.Println("File not an image: ", path)
 			return nil
 		})
 		if err != nil {
@@ -489,38 +363,9 @@ func discoverImages(db *sql.DB) (bool, error) {
 		}
 	}
 
-	logger.Println("Discovery Complete. Added or Discovered ", count, " new images.")
+	appLogger.Println("Discovery Complete. Added or Discovered ", count, " new images.")
 
 	return true, nil
-}
-
-func getImageCount(db *sql.DB) int {
-	var imgCount int
-	count, err := db.Query("SELECT DISTINCT count(id) FROM Image;")
-	if err != nil {
-		logger.Println("Error getting image count:", err)
-	}
-	count.Scan(&imgCount)
-	return imgCount
-}
-
-func getImagesFromDatabase(db *sql.DB, imageCount uint) ([]string, error) {
-	images, err := db.Query("SELECT path FROM Image ORDER BY dateAdded DESC LIMIT ?", imageCount)
-	if err != nil {
-		return nil, err
-	}
-	defer images.Close()
-
-	var imagePaths []string
-	for images.Next() {
-		var path string
-		if err := images.Scan(&path); err != nil {
-			return nil, err
-		}
-		imagePaths = append(imagePaths, path)
-	}
-
-	return imagePaths, nil
 }
 
 func createDisplayImagesFunction(db *sql.DB, w fyne.Window, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App, mainContainer *fyne.Container) func(string) {
@@ -540,7 +385,6 @@ func createDisplayImagesFunction(db *sql.DB, w fyne.Window, sidebar *fyne.Contai
 		// create a loading message
 		loadingMessage := widget.NewLabel("Loading images...")
 		content := container.NewVBox(loadingIndicator, loadingMessage, imageContainer)
-		// content := container.NewGridWithRows(3, loadingIndicator, loadingMessage, imageContainer)
 		// still loading so display loading message and bar
 		mainContainer.Add(content)
 
@@ -550,7 +394,7 @@ func createDisplayImagesFunction(db *sql.DB, w fyne.Window, sidebar *fyne.Contai
 		// loop through images
 		for _, file := range files {
 			// check if it's an image
-			if !file.IsDir() && isImageFile(file.Name()) {
+			if !file.IsDir() && fileutils.IsImageFile(file.Name()) {
 				// get full image path
 				imgPath := filepath.Join(dir, file.Name())
 				wg.Add(1)
@@ -622,18 +466,11 @@ func createDisplayImagesFunctionFromDb(db *sql.DB, w fyne.Window, sidebar *fyne.
 	}
 }
 
-func isFile(path string) (bool, error) {
-	fileInfo, err := os.Stat(path)
-	if err != nil {
-		return false, err
-	}
-	return !fileInfo.IsDir(), nil
-}
-
 func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.Container, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App) {
 	// create a placeholder image
 	placeholderResource := fyne.NewStaticResource("placeholder", []byte{})
 	imgButton := newImageButton(placeholderResource, nil)
+
 	resourceChan := make(chan fyne.Resource, 1)
 
 	// claude ai
@@ -641,14 +478,14 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 		// load the image as a fyne resource
 		resource, err := loadImageResourceThumbnailEfficient(path)
 		if err != nil {
-			logger.Printf("No resource image empty %s: %v", path, err)
+			appLogger.Printf("No resource image empty %s: %v", path, err)
 			resourceChan <- placeholderResource
 			canvas.Refresh(imgButton)
 			return
 		}
 
 		// set the image button image to the resource
-		// logger.Println("Resource image not empty.", resource.Content()[:16])
+		// appLogger.Println("Resource image not empty.", resource.Content()[:16])
 		imgButton.image.Resource = resource
 		canvas.Refresh(imgButton)
 		resourceChan <- resource
@@ -681,10 +518,10 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	fullLabel := widget.NewLabel(truncateFilename(filepath.Base(path), 10))
 	fullLabel.Wrapping = fyne.TextWrapWord
 
-	dateAdded := widget.NewLabel("Date Added: " + getDate(db, path))
+	dateAdded := widget.NewLabel("Date Added: " + database.GetDate(db, path))
 	dateAdded.Wrapping = fyne.TextWrapWord
 
-	imageId := getImageId(db, path)
+	imageId := database.GetImageId(db, path)
 	tagDisplay := createTagDisplay(db, imageId)
 
 	addTagButton := widget.NewButton("+", func() {
@@ -709,26 +546,6 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	sidebar.Show()
 	split.Offset = 0.65 // was 0.7 by default
 	sidebar.Refresh()
-}
-
-func getImageId(db *sql.DB, path string) int {
-	var imageId int
-	err := db.QueryRow("SELECT id FROM Image WHERE path = ?", path).Scan(&imageId)
-	if err != nil {
-		logger.Println("Error getting image ID:", err)
-		return 0
-	}
-	return imageId
-}
-
-func getDate(db *sql.DB, path string) string {
-	var date string
-	err := db.QueryRow("SELECT STRFTIME('%H:%M %d-%m-%Y', DATETIME(dateAdded, '+3 HOURS')) FROM Image WHERE path = ?", path).Scan(&date)
-	if err != nil {
-		logger.Println("Error getting date:", err)
-		return ""
-	}
-	return date
 }
 
 func showTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int, tagList *fyne.Container) {
@@ -767,7 +584,7 @@ func showTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int, tagLis
 
 			button := widget.NewButton(name, nil)
 			button.Importance = widget.LowImportance
-			c, _ := HexToColor(color)
+			c, _ := colorutils.HexToColor(color)
 			rect := canvas.NewRectangle(c)
 			rect.CornerRadius = 5
 
@@ -813,7 +630,7 @@ func showCreateTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 	var updateColor func()
 	var getHexColor func() string
 
-	if options.UseRGB {
+	if appOptions.UseRGB {
 		r, g, b := widget.NewSlider(0, 255), widget.NewSlider(0, 255), widget.NewSlider(0, 255)
 		updateColor = func() {
 			colorPreviewRect.FillColor = color.NRGBA{uint8(r.Value), uint8(g.Value), uint8(b.Value), 255}
@@ -837,14 +654,14 @@ func showCreateTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 		h.Value, s.Value, v.Value = 200, 50, 100
 		h.Step, s.Step, v.Step = 1, 1, 1
 		updateColor = func() {
-			hex := HSVToHex(h.Value, s.Value/100, v.Value/100)
-			if color, err := HexToColor(hex); err == nil {
+			hex := colorutils.HSVToHex(h.Value, s.Value/100, v.Value/100)
+			if color, err := colorutils.HexToColor(hex); err == nil {
 				colorPreviewRect.FillColor = color
 				colorPreviewRect.Refresh()
 			}
 		}
 		getHexColor = func() string {
-			return HSVToHex(h.Value, s.Value/100, v.Value/100)
+			return colorutils.HSVToHex(h.Value, s.Value/100, v.Value/100)
 		}
 		for _, slider := range []*widget.Slider{h, s, v} {
 			slider.OnChanged = func(_ float64) { updateColor() }
@@ -886,28 +703,6 @@ func showCreateTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 	tagWindow.Show()
 
 	updateColor() // Initial color update
-}
-
-func isImageFile(filename string) bool {
-	ext := strings.ToLower(filepath.Ext(filename))
-	_, ok := imageTypes[ext]
-	return ok
-}
-
-func isImageFileMap(filename string) bool {
-	// create a map of image extensions
-	imageTypes := map[string]int{
-		".jpg":  1,
-		".png":  1,
-		".jpeg": 1,
-		".gif":  1,
-		".bmp":  1,
-		".ico":  1,
-	}
-	// get the file extension
-	ext := strings.ToLower(filepath.Ext(filename))
-	// if the file extension is in the map return true
-	return imageTypes[ext] != 0
 }
 
 func truncateFilename(filename string, maxLength int) string {
@@ -957,11 +752,11 @@ func loadImageResourceEfficient(path string) (fyne.Resource, error) {
 	ratio := float64(bounds.Dx()) / float64(bounds.Dy())
 	var thumbWidth, thumbHeight int
 	if ratio > 1 {
-		thumbWidth = thumbnailSize
-		thumbHeight = int(float64(thumbnailSize) / ratio)
+		thumbWidth = appOptions.ThumbnailSize
+		thumbHeight = int(float64(appOptions.ThumbnailSize) / ratio)
 	} else {
-		thumbHeight = thumbnailSize
-		thumbWidth = int(float64(thumbnailSize) * ratio)
+		thumbHeight = appOptions.ThumbnailSize
+		thumbWidth = int(float64(appOptions.ThumbnailSize) * ratio)
 	}
 
 	// Create a new image with the thumbnail dimensions
@@ -1018,7 +813,7 @@ func loadImageResourceThumbnailEfficient(path string) (fyne.Resource, error) {
 	y := (bounds.Dy() - size) / 2
 
 	// Create a new square image for the thumbnail
-	thumbImg := image.NewRGBA(image.Rect(0, 0, thumbnailSize, thumbnailSize))
+	thumbImg := image.NewRGBA(image.Rect(0, 0, appOptions.ThumbnailSize, appOptions.ThumbnailSize))
 
 	// Crop and resize the image
 	draw.ApproxBiLinear.Scale(
@@ -1053,71 +848,6 @@ func loadImageResourceThumbnailEfficient(path string) (fyne.Resource, error) {
 	return resource, nil
 }
 
-func getImagePathsByTag(db *sql.DB, tagName string) ([]string, error) {
-	query := `
-        SELECT DISTINCT Image.path
-        FROM Image
-        JOIN ImageTag ON Image.id = ImageTag.imageId
-        JOIN Tag ON ImageTag.tagId = Tag.id
-        WHERE Tag.name LIKE ?
-    `
-
-	stmt, err := db.Prepare(query)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-
-	rows, err := stmt.Query(tagName)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var paths []string
-	for rows.Next() {
-		var path string
-		if err := rows.Scan(&path); err != nil {
-			return nil, err
-		}
-		paths = append(paths, path)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return paths, nil
-}
-
-// Function to handle tag-based search
-func searchImagesByTag(db *sql.DB, tagName string) ([]string, error) {
-	query := `
-		SELECT DISTINCT Image.path
-		FROM Image
-		JOIN ImageTag ON Image.id = ImageTag.imageId
-		JOIN Tag ON ImageTag.tagId = Tag.id
-		WHERE Tag.name LIKE ?
-	`
-	rows, err := db.Query(query, tagName)
-	// rows, err := db.Query(query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var imagePaths []string
-	for rows.Next() {
-		var path string
-		if err := rows.Scan(&path); err != nil {
-			return nil, err
-		}
-		imagePaths = append(imagePaths, path)
-	}
-
-	return imagePaths, nil
-}
-
 // Function to update the main content based on search results
 func updateContentWithSearchResults(content *fyne.Container, imagePaths []string, db *sql.DB, w fyne.Window, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App) {
 	content.RemoveAll()
@@ -1131,19 +861,13 @@ func updateContentWithSearchResults(content *fyne.Container, imagePaths []string
 	content.Refresh()
 }
 
-// Add a function to remove a tag from an image
-func removeTagFromImage(db *sql.DB, imageId int, tagId int) error {
-	_, err := db.Exec("DELETE FROM ImageTag WHERE imageId = ? AND tagId = ?", imageId, tagId)
-	return err
-}
-
 // Modify the createTagDisplay function to include tag removal functionality
 func createTagDisplay(db *sql.DB, imageId int) *fyne.Container {
 	tagDisplay := container.NewAdaptiveGrid(3)
 
 	rows, err := db.Query("SELECT Tag.id, Tag.name, Tag.color FROM ImageTag INNER JOIN Tag ON ImageTag.tagId = Tag.id WHERE ImageTag.imageId = ?", imageId)
 	if err != nil {
-		logger.Println("Error querying image tags:", err)
+		appLogger.Println("Error querying image tags:", err)
 		return tagDisplay
 	}
 	defer rows.Close()
@@ -1152,20 +876,20 @@ func createTagDisplay(db *sql.DB, imageId int) *fyne.Container {
 		var tagId int
 		var tagName, tagColor string
 		if err := rows.Scan(&tagId, &tagName, &tagColor); err != nil {
-			logger.Println("Error scanning tag data:", err)
+			appLogger.Println("Error scanning tag data:", err)
 			continue
 		}
 
 		tagButton := widget.NewButton(tagName, nil)
 		tagButton.Importance = widget.LowImportance
-		c, _ := HexToColor(tagColor)
+		c, _ := colorutils.HexToColor(tagColor)
 		rect := canvas.NewRectangle(c)
 		rect.CornerRadius = 5
 
 		tagButton.OnTapped = func() {
 			dialog.ShowConfirm("Remove Tag", "Are you sure you want to remove this tag?", func(remove bool) {
 				if remove {
-					if err := removeTagFromImage(db, imageId, tagId); err != nil {
+					if err := database.RemoveTagFromImage(db, imageId, tagId); err != nil {
 						fmt.Print("createTagDisplay")
 						dialog.ShowError(err, nil)
 					} else {
@@ -1182,65 +906,13 @@ func createTagDisplay(db *sql.DB, imageId int) *fyne.Container {
 	return tagDisplay
 }
 
-// Helper function to convert a HSV color to Hex color string
-func HSVToHex(h, s, v float64) string {
-	h = math.Mod(h, 360)            // Ensure hue is between 0 and 359
-	s = math.Max(0, math.Min(1, s)) // Clamp saturation between 0 and 1
-	v = math.Max(0, math.Min(1, v)) // Clamp value between 0 and 1
-
-	c := v * s
-	x := c * (1 - math.Abs(math.Mod(h/60, 2)-1))
-	m := v - c
-
-	var r, g, b float64
-
-	switch {
-	case h < 60:
-		r, g, b = c, x, 0
-	case h < 120:
-		r, g, b = x, c, 0
-	case h < 180:
-		r, g, b = 0, c, x
-	case h < 240:
-		r, g, b = 0, x, c
-	case h < 300:
-		r, g, b = x, 0, c
-	default:
-		r, g, b = c, 0, x
-	}
-
-	r = (r + m) * 255
-	g = (g + m) * 255
-	b = (b + m) * 255
-
-	return fmt.Sprintf("#%02X%02X%02X", uint8(r), uint8(g), uint8(b))
-}
-
-// Helper function to convert hex color to color.Color
-func HexToColor(hex string) (color.Color, error) {
-	hex = strings.TrimPrefix(hex, "#")
-	if len(hex) != 6 {
-		return nil, fmt.Errorf("invalid hex color")
-	}
-	rgb, err := strconv.ParseUint(hex, 16, 32)
-	if err != nil {
-		return nil, err
-	}
-	return color.RGBA{
-		R: uint8(rgb >> 16),
-		G: uint8(rgb >> 8 & 0xFF),
-		B: uint8(rgb & 0xFF),
-		A: 255,
-	}, nil
-}
-
 // Add a settings window
 func showSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 	settingsWindow := a.NewWindow("Settings")
 
 	// Create a form for database path
 	dbPathEntry := widget.NewEntry()
-	dbPathEntry.SetText(options.DatabasePath) // Set current path
+	dbPathEntry.SetText(appOptions.DatabasePath) // Set current path
 
 	dbPathForm := &widget.Form{
 		Items: []*widget.FormItem{
@@ -1255,15 +927,16 @@ func showSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 
 	blackList := widget.NewList(
 		func() int {
-			return len(options.ExcludedDirs)
+			return len(appOptions.ExcludedDirs) - 1
 		},
 		func() fyne.CanvasObject {
 			return widget.NewLabel("Excluded directory")
 		},
 		func(id widget.ListItemID, item fyne.CanvasObject) {
-			for excluded := range options.ExcludedDirs {
+			for excluded := range appOptions.ExcludedDirs {
 				label := item.(*widget.Label)
 				label.SetText(excluded)
+				// widget.NewLabel(excluded)
 			}
 		},
 	)
@@ -1287,11 +960,11 @@ func showSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
 		},
 	)
 
-	timeZone := widget.NewLabel("Timezone in UTC: UTC" + strconv.Itoa(options.Timezone))
-	if options.Timezone > 0 {
-		timeZone = widget.NewLabel("Timezone in UTC: UTC+" + strconv.Itoa(options.Timezone))
+	timeZone := widget.NewLabel("Timezone in UTC: UTC" + strconv.Itoa(appOptions.Timezone))
+	if appOptions.Timezone > 0 {
+		timeZone = widget.NewLabel("Timezone in UTC: UTC+" + strconv.Itoa(appOptions.Timezone))
 	} else {
-		timeZone = widget.NewLabel("Timezone in UTC: UTC" + strconv.Itoa(options.Timezone))
+		timeZone = widget.NewLabel("Timezone in UTC: UTC" + strconv.Itoa(appOptions.Timezone))
 	}
 
 	// Create a button to open the theme editor
@@ -1443,29 +1116,29 @@ func getThemeColor(t fyne.Theme, prop string) color.Color {
 // 	}
 // }
 
-func getColorComponentString(c color.Color, component int) string {
-	r, g, b, a := c.RGBA()
-	switch component {
-	case 0:
-		return fmt.Sprintf("%d", uint8(r>>8))
-	case 1:
-		return fmt.Sprintf("%d", uint8(g>>8))
-	case 2:
-		return fmt.Sprintf("%d", uint8(b>>8))
-	case 3:
-		return fmt.Sprintf("%d", uint8(a>>8))
-	default:
-		return "0"
-	}
-}
+// func getColorComponentString(c color.Color, component int) string {
+// 	r, g, b, a := c.RGBA()
+// 	switch component {
+// 	case 0:
+// 		return fmt.Sprintf("%d", uint8(r>>8))
+// 	case 1:
+// 		return fmt.Sprintf("%d", uint8(g>>8))
+// 	case 2:
+// 		return fmt.Sprintf("%d", uint8(b>>8))
+// 	case 3:
+// 		return fmt.Sprintf("%d", uint8(a>>8))
+// 	default:
+// 		return "0"
+// 	}
+// }
 
-func parseColorComponent(s string) uint8 {
-	v, err := strconv.ParseUint(s, 10, 8)
-	if err != nil {
-		return 0
-	}
-	return uint8(v)
-}
+// func parseColorComponent(s string) uint8 {
+// 	v, err := strconv.ParseUint(s, 10, 8)
+// 	if err != nil {
+// 		return 0
+// 	}
+// 	return uint8(v)
+// }
 
 func showColorPickerWindow(propertyName string, colorPreview *canvas.Rectangle, currentTheme fyne.Theme, a fyne.App, w fyne.Window) {
 	colorPickerWindow := a.NewWindow("Color Picker")
@@ -1478,7 +1151,7 @@ func showColorPickerWindow(propertyName string, colorPreview *canvas.Rectangle, 
 	var content *fyne.Container
 	var updateColor func()
 
-	if options.UseRGB {
+	if appOptions.UseRGB {
 		r, g, b := widget.NewSlider(0, 255), widget.NewSlider(0, 255), widget.NewSlider(0, 255)
 		updateColor = func() {
 			newColor := color.NRGBA{uint8(r.Value), uint8(g.Value), uint8(b.Value), 255}
@@ -1505,8 +1178,8 @@ func showColorPickerWindow(propertyName string, colorPreview *canvas.Rectangle, 
 		h.Value, s.Value, v.Value = 200, 0.5, 1
 		h.Step, s.Step, v.Step = 1, 0.01, 0.01
 		updateColor = func() {
-			hex := HSVToHex(h.Value, s.Value, v.Value)
-			if newColor, err := HexToColor(hex); err == nil {
+			hex := colorutils.HSVToHex(h.Value, s.Value, v.Value)
+			if newColor, err := colorutils.HexToColor(hex); err == nil {
 				colorPreviewRect.FillColor = newColor
 				colorPreview.FillColor = newColor
 				// doesn't work
