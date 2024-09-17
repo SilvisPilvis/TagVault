@@ -165,10 +165,18 @@ func main() {
 	appLogger.Println("Check Obsidian Todo list")
 	appLogger.Println("Make displayImages work with getImagesFromDatabase")
 
-	appOptions.ExcludedDirs = map[string]int{"Games": 1, "games": 1, "go": 1, "TagVault": 1}
+	appOptions.ExcludedDirs = map[string]int{"Games": 1, "games": 1, "go": 1, "TagVault": 1} // try to add filepath.Base(os.Getwd()): 1
 	appLogger.Println("ExcludedDirsLen: ", len(appOptions.ExcludedDirs))
 	appLogger.Println("ExcludedDirs: ", appOptions.ExcludedDirs)
 	appLogger.Println("If there are no images in the directory then add the highest directory that contains images to the ExcludedDirs list")
+
+	// appLogger.Println("Downloading ffmpeg")
+	// err := ffmpeg.DownloadFFmpegLinux()
+	// if err != nil {
+	// 	appLogger.Println(err)
+	// }
+	// appLogger.Println("Downloaded ffmpeg")
+	// os.Exit(0)
 
 	// appLogger.Println("Minimize widget updates:
 	// Fyne's object tree walking is often triggered by widget updates. Try to reduce unnecessary updates by:
@@ -227,8 +235,6 @@ func main() {
 	split := container.NewHSplit(scroll, sidebarScroll)
 	split.Offset = 1 // Start with sidebar hidden
 
-	defaultPath := getImagePath()
-
 	content.RemoveAll()
 
 	input := widget.NewEntry()
@@ -272,7 +278,7 @@ func main() {
 	}
 	displayImages := createDisplayImagesFunctionFromDb(db, w, sidebar, sidebarScroll, split, a, content, dbImages)
 	// displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, mainContainer)
-	displayImages(defaultPath)
+	displayImages("")
 
 	w.SetContent(mainContainer)
 	w.ShowAndRun()
@@ -290,14 +296,6 @@ func setupMainWindow(a fyne.App) fyne.Window {
 	w.SetIcon(icon)
 
 	return w
-}
-
-func getImagePath() string {
-	userHome, _ := os.UserHomeDir()
-	if runtime.GOOS == "linux" {
-		return userHome + "/Attēli/wallpapers/"
-	}
-	return `C:\Users\Silvestrs\Desktop\test`
 }
 
 func createDisplayImagesFunction(db *sql.DB, w fyne.Window, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App, mainContainer *fyne.Container) func(string) {
@@ -366,7 +364,6 @@ func createDisplayImagesFunctionFromDb(db *sql.DB, w fyne.Window, sidebar *fyne.
 		content := container.NewVBox(loadingIndicator, loadingMessage, imageContainer)
 		// still loading so display loading message and bar
 		mainContainer.Add(content)
-		// mainContainer.Add(imageContainer)
 
 		var wg sync.WaitGroup
 		semaphore := make(chan struct{}, runtime.NumCPU())

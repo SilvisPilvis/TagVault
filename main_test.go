@@ -67,6 +67,11 @@ func TestDirectoryExclusionHidden(t *testing.T) {
 	assert.True(t, isExcludedDir("/home/amaterasu/.cache", blackList), "Hidden Directory is not excluded")
 }
 
+func TestDirectoryExclusionBlacklistCreation(t *testing.T) {
+	// Check the window title
+	assert.NotNil(t, blackList, "Blacklist was not created")
+}
+
 func TestDirectoryExclusionBlacklist(t *testing.T) {
 	// Check the window title
 	assert.True(t, isExcludedDir("/home/amaterasu/go", blackList), "Blacklisted Directory is not excluded")
