@@ -2,23 +2,24 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"fmt"
 	"image"
 	"image/color"
-	"math"
-
-	// "image/draw"
-
 	"image/jpeg"
 	"image/png"
 	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
+
+	// "image/draw"
 
 	"golang.org/x/image/draw"
 
@@ -154,6 +155,7 @@ type Options struct {
 	SortDesc     bool
 	UseRGB       bool
 	ExifFields   []string // exif fields to display in the sidebar
+	ImageNumber  uint
 }
 
 func (opts Options) InitDefault() *Options {
@@ -165,6 +167,7 @@ func (opts Options) InitDefault() *Options {
 		SortDesc:     true,
 		UseRGB:       false,
 		ExifFields:   []string{"DateTime"},
+		ImageNumber:  20,
 	}
 }
 
@@ -239,43 +242,46 @@ func main() {
 	// walk trough all directories and if image add to db
 	logger.Println("Before: ", getImageCount(db))
 
-	// discoverSuccess, err := discoverImages(db)
-	// if err != nil {
-	// 	// dialog.ShowError(err, w)
-	// 	// return
-	// 	logger.Fatalln("Error discovering images:", err)
-	// }
-	// logger.Println("Discover success: ", discoverSuccess)
+	// // makes a channel that will be closed when the discovery is complete
+	// done := make(chan bool)
 
-	// makes a channel that will be closed when the discovery is complete
-	done := make(chan bool)
-
-	// runs the discovery in the background
-	// Discovery using goroutine
-	go func() {
-		_, err := discoverImages(db)
-		if err != nil {
-			logger.Println("Error discovering images:", err)
-		}
-		// sets the done channel to true
-		done <- true
-	}()
+	// // runs the discovery in the background
+	// // Discovery using goroutine
+	// go func() {
+	// 	_, err := discoverImages(db)
+	// 	if err != nil {
+	// 		logger.Println("Error discovering images:", err)
+	// 	}
+	// 	// sets the done channel to true
+	// 	done <- true
+	// }()
 
 	// // Wait for the discovery to complete
 	// <-done
 
+	// In your main function or wherever you want to start the discovery
+	// discoveryDone := startImageDiscovery(db)
+
+	// select {
+	// case <-discoveryDone:
+	// 	fmt.Println("Discovery complete")
+	// default:
+	// 	fmt.Println("Discovery still in progress")
+	// }
+
+	// // When you want to wait for the discovery to complete (maybe before exiting the program)
+	// <-discoveryDone
+
 	// Discovery using waitgroup
-	// var wg sync.WaitGroup
+	var wg sync.WaitGroup
 
-	// wg.Add(1)
-	// go func() {
-	// 	defer wg.Done()
-	// 	discoverImages(db)
-	// }()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		discoverImages(db)
+	}()
 
-	// wg.Wait()
-
-	logger.Println("After: ", getImageCount(db))
+	wg.Wait()
 
 	content := container.NewVBox()
 	scroll := container.NewVScroll(content)
@@ -287,7 +293,7 @@ func main() {
 	split := container.NewHSplit(scroll, sidebarScroll)
 	split.Offset = 1 // Start with sidebar hidden
 
-	testPath := getImagePath()
+	defaultPath := getImagePath()
 
 	content.RemoveAll()
 
@@ -328,13 +334,14 @@ func main() {
 	// controls := container.NewBorder(nil, nil, nil, optContainer)
 	mainContainer := container.NewBorder(controls, nil, nil, nil, container.NewPadded(split))
 	// displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, content)
-	dbImages, err := getImagesFromDatabase(db)
+
+	dbImages, err := getImagesFromDatabase(db, options.ImageNumber)
 	if err != nil {
 		logger.Fatal(err)
 	}
-	displayImages := createDisplayImagesFunctionFromDb(db, w, sidebar, sidebarScroll, split, a, mainContainer, dbImages)
-
-	displayImages(testPath)
+	displayImages := createDisplayImagesFunctionFromDb(db, w, sidebar, sidebarScroll, split, a, content, dbImages)
+	// displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, mainContainer)
+	displayImages(defaultPath)
 
 	w.SetContent(mainContainer)
 	w.ShowAndRun()
@@ -364,11 +371,11 @@ func setupProfiling() {
 }
 
 func setupDatabase() *sql.DB {
-	db, err := sql.Open("sqlite3", "file:./index.db")
+	db, err := sql.Open("sqlite3", "file:./index.db?_timeout=10000&_busy_timeout=10000")
 	if err != nil {
 		logger.Fatal("Failed to open database: ", err)
 	}
-	db.SetMaxOpenConns(1)
+	db.SetMaxOpenConns(2)
 	if err := db.Ping(); err != nil {
 		logger.Fatal("Failed to connect to database: ", err)
 	}
@@ -382,6 +389,7 @@ func setupTables(db *sql.DB) {
 	tables := []string{
 		"CREATE TABLE IF NOT EXISTS `Tag`(`id` INTEGER PRIMARY KEY NOT NULL, `name` VARCHAR(255) NOT NULL, `color` VARCHAR(7) NOT NULL);",
 		"CREATE TABLE IF NOT EXISTS `Image`(`id` INTEGER PRIMARY KEY NOT NULL, `path` VARCHAR(1024) NOT NULL, `dateAdded` DATETIME NOT NULL);",
+		"CREATE INDEX IF NOT EXISTS idx_image_path ON Image(path);",
 		"CREATE TABLE IF NOT EXISTS `ImageTag`(`imageId` INTEGER NOT NULL, `tagId` INTEGER NOT NULL);",
 		"CREATE TABLE IF NOT EXISTS `Options`(`dbPath` VARCHAR(255) NOT NULL, `timezone` VARCHAR(1024) NOT NULL, `sortDesc` BOOLEAN);",
 	}
@@ -414,16 +422,6 @@ func getImagePath() string {
 	return `C:\Users\Silvestrs\Desktop\test`
 }
 
-// func isExcludedDir(dir string, blackList map[string]int) bool {
-// 	logger.Println(blackList)
-// 	// checks if the directory is blacklisted
-// 	if blackList[dir] == 1 {
-// 		return true
-// 	}
-// 	// checks if the directory is a hidden directory
-// 	return strings.HasPrefix(dir, ".")
-// }
-
 func isExcludedDir(dir string, blackList map[string]int) bool {
 	// checks if the directory is blacklisted
 	for key := range blackList {
@@ -434,7 +432,8 @@ func isExcludedDir(dir string, blackList map[string]int) bool {
 	// checks if the directory (not the full path so useless) is a hidden directory
 	// return strings.HasPrefix(dir, ".")
 	// checks if the path is a hidden directory
-	return strings.Contains(dir, ".")
+	// Claude solution
+	return strings.HasPrefix(filepath.Base(dir), ".")
 }
 
 func discoverImages(db *sql.DB) (bool, error) {
@@ -451,19 +450,27 @@ func discoverImages(db *sql.DB) (bool, error) {
 		filepath.Join(userHome),
 	}
 
-	stmt, err := db.Prepare("INSERT INTO Image (path, dateAdded) SELECT ?, DATETIME('now') WHERE NOT EXISTS (SELECT 1 FROM Image WHERE path = ?)")
+	logger.Println("Home dir: ", directories)
+
+	// adds context so we can cancel the operation
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	logger.Println("Created timeout context")
+	stmt, err := db.PrepareContext(ctx, "INSERT INTO Image (path, dateAdded) SELECT ?, DATETIME('now') WHERE NOT EXISTS (SELECT 1 FROM Image WHERE path = ?)")
 	if err != nil {
 		return false, fmt.Errorf("error preparing SQL statement: %w", err)
 	}
 	defer stmt.Close()
+	logger.Println("Prepared successfully")
 
 	for _, directory := range directories {
 		err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return fmt.Errorf("error walking path %s: %w", path, err)
 			}
+			logger.Println("Path: ", info.Name())
 			if info.IsDir() && isExcludedDir(path, options.ExcludedDirs) {
-				// logger.Println("Skipping hidden directory: ", info.Name())
+				logger.Println("Skipping hidden/exluded directory: ", info.Name())
 				// Skip path if path is a hidden dir or in excluded dirs
 				return filepath.SkipDir
 			}
@@ -473,8 +480,8 @@ func discoverImages(db *sql.DB) (bool, error) {
 					return fmt.Errorf("error inserting image path into database: %w", err)
 				}
 				count++
-				logger.Println("Added an image.")
 			}
+			logger.Println("File not an image: ", path)
 			return nil
 		})
 		if err != nil {
@@ -482,7 +489,7 @@ func discoverImages(db *sql.DB) (bool, error) {
 		}
 	}
 
-	logger.Println("Discovery Complete. Added: ", count, "images")
+	logger.Println("Discovery Complete. Added or Discovered ", count, " new images.")
 
 	return true, nil
 }
@@ -497,48 +504,8 @@ func getImageCount(db *sql.DB) int {
 	return imgCount
 }
 
-// func discoverImages(db *sql.DB) (bool, error) {
-// 	userHome, _ := os.UserHomeDir()
-
-// 	directories := []string{
-// 		userHome + "/Pictures/",
-// 		userHome + "/Documents/",
-// 		userHome + "/Desktop/",
-// 		userHome + "/Downloads/",
-// 		userHome + "/Music/",
-// 		userHome + "/Videos/",
-// 	}
-
-// 	// for each directory
-// 	for _, directory := range directories {
-// 		// walk the directory
-// 		err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
-// 			// if error, return error
-// 			if err != nil {
-// 				return errors.New("Error walking directory: " + err.Error())
-// 			}
-// 			// if directory, return nil
-// 			if !info.IsDir() {
-// 				// if image
-// 				if isImageFileMap(path) {
-// 					// add image path to database
-// 					db.Exec("INSERT INTO Image (path, dateAdded) SELECT ?, DATETIME('now') WHERE NOT EXISTS (SELECT 1 FROM Image WHERE path = ?);", path, path)
-// 				}
-// 			}
-// 			return errors.New("Error walking directory: file is directory")
-// 		})
-// 		// if walk error, return error
-// 		if err != nil {
-// 			return false, errors.New("Error walking directory: " + err.Error())
-// 		}
-// 	}
-
-// 	// if everything is ok, return true
-// 	return true, nil
-// }
-
-func getImagesFromDatabase(db *sql.DB) ([]string, error) {
-	images, err := db.Query("SELECT path FROM Image")
+func getImagesFromDatabase(db *sql.DB, imageCount uint) ([]string, error) {
+	images, err := db.Query("SELECT path FROM Image ORDER BY dateAdded DESC LIMIT ?", imageCount)
 	if err != nil {
 		return nil, err
 	}
@@ -621,9 +588,9 @@ func createDisplayImagesFunctionFromDb(db *sql.DB, w fyne.Window, sidebar *fyne.
 		// create a loading message
 		loadingMessage := widget.NewLabel("Loading images...")
 		content := container.NewVBox(loadingIndicator, loadingMessage, imageContainer)
-		// content := container.NewGridWithRows(3, loadingIndicator, loadingMessage, imageContainer)
 		// still loading so display loading message and bar
 		mainContainer.Add(content)
+		// mainContainer.Add(imageContainer)
 
 		var wg sync.WaitGroup
 		semaphore := make(chan struct{}, runtime.NumCPU())
@@ -693,11 +660,6 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 		updateSidebar(db, w, path, resource, sidebar, sidebarScroll, split, a, imageContainer)
 	}
 
-	// truncate the image name
-	// truncatedName := truncateFilename(filepath.Base(path), 10)
-	db.Exec("INSERT INTO Image (path, dateAdded) SELECT ?, DATETIME('now') WHERE NOT EXISTS (SELECT 1 FROM Image WHERE path = ?);", path, path)
-	// label := widget.NewLabel(truncatedName)
-
 	// make a parent container to hold the image button and label
 	// imageTile := container.NewVBox(container.NewPadded(imgButton), label)
 	imageTile := container.NewVBox(container.NewPadded(imgButton))
@@ -744,7 +706,7 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	sidebarScroll.Show()
 	imageContainer.Refresh()
 	tagDisplay.Refresh()
-	// sidebar.Show()
+	sidebar.Show()
 	split.Offset = 0.65 // was 0.7 by default
 	sidebar.Refresh()
 }
