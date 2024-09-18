@@ -14,15 +14,14 @@ import (
 	"main/goexport/logger"
 	"main/goexport/options"
 	"main/goexport/profiling"
-	"strings"
-
-	// "main/goexport/fynecomponents/imgbtn"
-
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
+
+	// "main/goexport/fynecomponents/imgbtn"
 
 	// "image/draw"
 
@@ -150,11 +149,11 @@ func (defaultTheme) Size(s fyne.ThemeSizeName) float32 {
 var (
 	resourceCache sync.Map
 	appOptions    = new(options.Options).InitDefault()
+	optionsExist  = false
 	appLogger     = logger.InitLogger()
 )
 
 func main() {
-
 	if appOptions.Profiling {
 		profiling.SetupProfiling()
 	}
@@ -171,7 +170,20 @@ func main() {
 	}
 	appLogger.Println("Do options exist? ", optionsExist)
 
-	appOptions.ExcludedDirs = map[string]int{"Games": 1, "games": 1, "go": 1, "TagVault": 1} // try to add filepath.Base(os.Getwd()): 1
+	if !optionsExist {
+		appLogger.Println("Creating options")
+		appOptions = new(options.Options).InitDefault()
+		appOptions.ExcludedDirs = map[string]int{"Games": 1, "games": 1, "go": 1, "TagVault": 1} // try to add filepath.Base(os.Getwd()): 1
+	} else {
+		appLogger.Println("Loading options")
+		appOptions, err = options.LoadOptionsFromDB(db)
+		if err != nil {
+			appLogger.Println("Error loading options: ", err)
+		}
+		appLogger.Println(appOptions.ExcludedDirs)
+		// appOptions.ExcludedDirs = map[string]int{"Games": 1, "games": 1, "go": 1, "TagVault": 1}
+	}
+
 	appLogger.Println("ExcludedDirsLen: ", len(appOptions.ExcludedDirs))
 	appLogger.Println("ExcludedDirs: ", appOptions.ExcludedDirs)
 	appLogger.Println("If there are no images in the directory then add the highest directory that contains images to the ExcludedDirs list")

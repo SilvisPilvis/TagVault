@@ -38,7 +38,7 @@ func setupTables(db *sql.DB) {
 		"CREATE TABLE IF NOT EXISTS `Image`(`id` INTEGER PRIMARY KEY NOT NULL, `path` VARCHAR(1024) NOT NULL, `dateAdded` DATETIME NOT NULL);",
 		"CREATE INDEX IF NOT EXISTS idx_image_path ON Image(path);",
 		"CREATE TABLE IF NOT EXISTS `ImageTag`(`imageId` INTEGER NOT NULL, `tagId` INTEGER NOT NULL);",
-		"CREATE TABLE IF NOT EXISTS `Options`(`dbPath` VARCHAR(255) NOT NULL, `excludedDirs` VARCHAR(255) NOT NULL, `timezone` VARCHAR(1024) NOT NULL, `sortDesc` BOOLEAN, `useRGB` BOOLEAN, `imageNumber` INTEGER NOT NULL, `thumbnailSize` NOT NULL);",
+		"CREATE TABLE IF NOT EXISTS `Options`(`DatabasePath` VARCHAR(255) NOT NULL, `ExcludedDirs` VARCHAR(255) NOT NULL, `Timezone` VARCHAR(1024) NOT NULL, `SortDesc` BOOLEAN DEFAULT true, `UseRGB` BOOLEAN DEFAULT false, `ImageNumber` INTEGER NOT NULL DEFAULT 20, `ThumbnailSize` INTEGER NOT NULL DEFAULT 256, `Profiling` BOOLEAN DEFAULT false, `ExifFields` VARCHAR(255));",
 	}
 	for _, table := range tables {
 		if _, err := db.Exec(table); err != nil {
@@ -97,13 +97,14 @@ func GetDate(db *sql.DB, path string) string {
 }
 
 func GetImagePathsByTag(db *sql.DB, tagName string) ([]string, error) {
-	query := `
-        SELECT DISTINCT Image.path
-        FROM Image
-        JOIN ImageTag ON Image.id = ImageTag.imageId
-        JOIN Tag ON ImageTag.tagId = Tag.id
-        WHERE Tag.name LIKE ?
-    `
+	query := `SELECT DISTINCT Image.path FROM Image JOIN ImageTag ON Image.id = ImageTag.imageId JOIN Tag ON ImageTag.tagId = Tag.id WHERE Tag.name LIKE ?`
+	// query := `
+	// SELECT DISTINCT Image.path
+	// FROM Image
+	// JOIN ImageTag ON Image.id = ImageTag.imageId
+	// JOIN Tag ON ImageTag.tagId = Tag.id
+	// WHERE Tag.name LIKE ? OR Image.path LIKE ?
+	// `
 
 	stmt, err := db.Prepare(query)
 	if err != nil {
@@ -111,6 +112,7 @@ func GetImagePathsByTag(db *sql.DB, tagName string) ([]string, error) {
 	}
 	defer stmt.Close()
 
+	// rows, err := stmt.Query(tagName, tagName)
 	rows, err := stmt.Query(tagName)
 	if err != nil {
 		return nil, err
