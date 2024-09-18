@@ -5,26 +5,25 @@ import (
 	"database/sql"
 	"fmt"
 	"image"
-	"image/color"
+
+	// "image/color"
 	"image/jpeg"
 	"image/png"
-	"main/goexport/colorutils"
+	"main/goexport/apptheme"
 	"main/goexport/database"
 	"main/goexport/fileutils"
 	"main/goexport/logger"
 	"main/goexport/options"
 	"main/goexport/profiling"
+	"main/goexport/tagwindow"
+	"main/goexport/utilwindows"
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"sync"
 
 	// "main/goexport/fynecomponents/imgbtn"
-
-	// "image/draw"
-
 	"golang.org/x/image/draw"
 
 	"fyne.io/fyne/v2"
@@ -34,6 +33,8 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	// "github.com/rwcarlsen/goexif/exif"
+	// "github.com/rwcarlsen/goexif/mknote"
 )
 
 type imageButton struct {
@@ -58,91 +59,6 @@ func (b *imageButton) CreateRenderer() fyne.WidgetRenderer {
 func (b *imageButton) Tapped(*fyne.PointEvent) {
 	if b.onTapped != nil {
 		b.onTapped()
-	}
-}
-
-// make a new theme called defaultTheme
-type defaultTheme struct{}
-
-// the new defaultTheme colors
-func (defaultTheme) Color(c fyne.ThemeColorName, v fyne.ThemeVariant) color.Color {
-	switch c {
-	case theme.ColorNameBackground:
-		return color.NRGBA{R: 0x04, G: 0x10, B: 0x11, A: 0xff}
-	case theme.ColorNameButton:
-		return color.NRGBA{R: 0x9e, G: 0xbd, B: 0xff, A: 0xff}
-	case theme.ColorNameDisabledButton:
-		return color.NRGBA{R: 0x26, G: 0x26, B: 0x26, A: 0xff}
-	case theme.ColorNameDisabled:
-		return color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0x42}
-	case theme.ColorNameError:
-		return color.NRGBA{R: 0xf4, G: 0x43, B: 0x36, A: 0xff}
-	case theme.ColorNameFocus:
-		return color.NRGBA{R: 0xa7, G: 0x2c, B: 0xd4, A: 0x7f}
-	case theme.ColorNameForeground:
-		return color.NRGBA{R: 0xe6, G: 0xf7, B: 0xfa, A: 0xff}
-	case theme.ColorNameHover:
-		return color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xf}
-	case theme.ColorNameInputBackground:
-		return color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0x19}
-	case theme.ColorNamePlaceHolder:
-		return color.NRGBA{R: 0xe6, G: 0xf7, B: 0xfa, A: 0xff}
-	case theme.ColorNamePressed:
-		return color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0x66}
-	case theme.ColorNamePrimary:
-		return color.NRGBA{R: 0x95, G: 0xdd, B: 0xe9, A: 0xff}
-	case theme.ColorNameScrollBar:
-		return color.NRGBA{R: 0x3f, G: 0x1d, B: 0x8b, A: 0xff}
-	case theme.ColorNameShadow:
-		return color.NRGBA{R: 0x0, G: 0x0, B: 0x0, A: 0x66}
-	default:
-		return theme.DefaultTheme().Color(c, v)
-	}
-}
-
-// the new defaultTheme fonts
-func (defaultTheme) Font(s fyne.TextStyle) fyne.Resource {
-	if s.Monospace {
-		return theme.DefaultTheme().Font(s)
-	}
-	if s.Bold {
-		if s.Italic {
-			return theme.DefaultTheme().Font(s)
-		}
-		return theme.DefaultTheme().Font(s)
-	}
-	if s.Italic {
-		return theme.DefaultTheme().Font(s)
-	}
-	return theme.DefaultTheme().Font(s)
-}
-
-// the new defaultTheme icons
-func (defaultTheme) Icon(n fyne.ThemeIconName) fyne.Resource {
-	return theme.DefaultTheme().Icon(n)
-}
-
-// the new defaultTheme font size
-func (defaultTheme) Size(s fyne.ThemeSizeName) float32 {
-	switch s {
-	case theme.SizeNameCaptionText:
-		return 11
-	case theme.SizeNameInlineIcon:
-		return 20
-	case theme.SizeNamePadding:
-		return 4
-	case theme.SizeNameScrollBar:
-		return 16
-	case theme.SizeNameScrollBarSmall:
-		return 6
-	case theme.SizeNameSeparatorThickness:
-		return 1
-	case theme.SizeNameText:
-		return 14
-	case theme.SizeNameInputBorder:
-		return 2
-	default:
-		return theme.DefaultTheme().Size(s)
 	}
 }
 
@@ -226,7 +142,7 @@ func main() {
 	a := app.NewWithID("TagVault")
 	w := setupMainWindow(a)
 
-	a.Settings().SetTheme(&defaultTheme{})
+	a.Settings().SetTheme(&apptheme.DefaultTheme{})
 
 	// walk trough all directories and if image add to db
 	appLogger.Println("Before: ", database.GetImageCount(db))
@@ -271,13 +187,14 @@ func main() {
 	}
 
 	settingsButton := widget.NewButton("", func() {
-		showSettingsWindow(a, w, db)
+		utilwindows.ShowSettingsWindow(a, w, db, appOptions)
 	})
 	settingsButton.Icon = theme.SettingsIcon()
 
+	// loadFilterButton, err := fyne.LoadResourceFromPath("./icons/filter.svg")
 	loadFilterButton, err := fyne.LoadResourceFromPath("./icons/filter.png")
 	if err != nil {
-		appLogger.Fatal(err)
+		appLogger.Fatal("Failed to load filter button: ", err)
 	}
 	filterButton := widget.NewButton("", func() {
 		// sidebarScroll.Show()
@@ -471,14 +388,15 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	fileType.Wrapping = fyne.TextWrapWord
 
 	imageId := database.GetImageId(db, path)
-	tagDisplay := createTagDisplay(db, imageId)
+	tagDisplay := tagwindow.CreateTagDisplay(db, imageId, appLogger)
 
 	addTagButton := widget.NewButton("+", func() {
-		showTagWindow(a, w, db, imageId, tagDisplay)
+		tagwindow.ShowTagWindow(a, w, db, imageId, tagDisplay)
 	})
 
 	createTagButton := widget.NewButton("Create Tag", func() {
-		showCreateTagWindow(a, w, db)
+		// showCreateTagWindow(a, w, db)
+		tagwindow.ShowCreateTagWindow(a, w, db, appOptions)
 	})
 
 	sidebar.Add(paddedImg)
@@ -499,163 +417,6 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	imageContainer.Refresh()
 	tagDisplay.Refresh()
 	sidebar.Refresh()
-}
-
-func showTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int, tagList *fyne.Container) {
-	tagWindow := a.NewWindow("Tags")
-	tagWindow.SetTitle("Add a Tag")
-
-	content := container.NewGridWithColumns(4)
-	loadingLabel := widget.NewLabel("Loading tags...")
-	content.Add(loadingLabel)
-
-	tagWindow.SetContent(container.NewVScroll(content))
-	tagWindow.Resize(fyne.NewSize(300, 200))
-	tagWindow.Show()
-
-	go func() {
-		tags, err := db.Query("SELECT id, name, color FROM Tag WHERE id NOT IN (SELECT tagId FROM ImageTag WHERE imageId = ?)", imgId)
-		if err != nil {
-			parent.Canvas().Refresh(parent.Content())
-			fmt.Print("showTagWindow")
-			dialog.ShowError(err, parent)
-			return
-		}
-		defer tags.Close()
-
-		var buttons []*fyne.Container
-		for tags.Next() {
-			var id int
-			var name string
-			var color string
-			if err := tags.Scan(&id, &name, &color); err != nil {
-				parent.Canvas().Refresh(parent.Content())
-				fmt.Print("showTagWindow")
-				dialog.ShowError(err, parent)
-				return
-			}
-
-			button := widget.NewButton(name, nil)
-			button.Importance = widget.LowImportance
-			c, _ := colorutils.HexToColor(color)
-			rect := canvas.NewRectangle(c)
-			rect.CornerRadius = 5
-
-			tagID := id
-			button.OnTapped = func() {
-				go func() {
-					_, err := db.Exec("INSERT OR IGNORE INTO ImageTag (imageId, tagId) VALUES (?, ?)", imgId, tagID)
-					parent.Content().Refresh()
-					if err != nil {
-						fmt.Print("showTagWindow")
-						dialog.ShowError(err, parent)
-					} else {
-						tagList.Add(container.NewPadded(container.NewStack(rect, button)))
-						tagList.Refresh()
-						dialog.ShowInformation("Success", "Tag Added", parent)
-						tagWindow.Close()
-					}
-				}()
-			}
-			buttons = append(buttons, container.NewPadded(container.NewStack(rect, button)))
-		}
-
-		tagWindow.Canvas().Refresh(content)
-		content.Remove(loadingLabel)
-		for _, button := range buttons {
-			content.Add(button)
-		}
-	}()
-}
-
-func showCreateTagWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
-	tagWindow := a.NewWindow("Create Tag")
-	tagWindow.SetTitle("Create a Tag")
-
-	colorPreviewRect := canvas.NewRectangle(color.NRGBA{0, 0, 130, 255})
-	colorPreviewRect.SetMinSize(fyne.NewSize(64, 128))
-	colorPreviewRect.CornerRadius = 5
-
-	stringInput := widget.NewEntry()
-	stringInput.SetPlaceHolder("Enter Tag name")
-
-	var content *fyne.Container
-	var updateColor func()
-	var getHexColor func() string
-
-	if appOptions.UseRGB {
-		r, g, b := widget.NewSlider(0, 255), widget.NewSlider(0, 255), widget.NewSlider(0, 255)
-		updateColor = func() {
-			colorPreviewRect.FillColor = color.NRGBA{uint8(r.Value), uint8(g.Value), uint8(b.Value), 255}
-			colorPreviewRect.Refresh()
-		}
-		getHexColor = func() string {
-			return fmt.Sprintf("#%02X%02X%02X", int(r.Value), int(g.Value), int(b.Value))
-		}
-		for _, slider := range []*widget.Slider{r, g, b} {
-			slider.OnChanged = func(_ float64) { updateColor() }
-		}
-		content = container.NewVBox(
-			widget.NewLabel("Color preview:"),
-			colorPreviewRect,
-			widget.NewLabel("Red:"), r,
-			widget.NewLabel("Green:"), g,
-			widget.NewLabel("Blue:"), b,
-		)
-	} else {
-		h, s, v := widget.NewSlider(0, 359), widget.NewSlider(0, 100), widget.NewSlider(0, 100)
-		h.Value, s.Value, v.Value = 200, 50, 100
-		h.Step, s.Step, v.Step = 1, 1, 1
-		updateColor = func() {
-			hex := colorutils.HSVToHex(h.Value, s.Value/100, v.Value/100)
-			if color, err := colorutils.HexToColor(hex); err == nil {
-				colorPreviewRect.FillColor = color
-				colorPreviewRect.Refresh()
-			}
-		}
-		getHexColor = func() string {
-			return colorutils.HSVToHex(h.Value, s.Value/100, v.Value/100)
-		}
-		for _, slider := range []*widget.Slider{h, s, v} {
-			slider.OnChanged = func(_ float64) { updateColor() }
-		}
-		content = container.NewVBox(
-			widget.NewLabel("Color preview:"),
-			colorPreviewRect,
-			widget.NewLabel("Hue:"), h,
-			widget.NewLabel("Saturation:"), s,
-			widget.NewLabel("Value:"), v,
-		)
-	}
-
-	createButton := widget.NewButton("Create Tag", func() {
-		tagName := stringInput.Text
-		if tagName == "" {
-			dialog.ShowInformation("Error", "Tag name cannot be empty", tagWindow)
-			return
-		}
-
-		hexColor := getHexColor()
-
-		_, err := db.Exec("INSERT INTO Tag (name, color) VALUES (?, ?)", tagName, hexColor)
-		if err != nil {
-			dialog.ShowError(fmt.Errorf("showCreateTagWindow: %w", err), tagWindow)
-			return
-		}
-
-		dialog.ShowInformation("Tag Created", fmt.Sprintf("Tag Name: %s\nColor: %s", tagName, hexColor), tagWindow)
-		tagWindow.Close()
-	})
-
-	content.Add(widget.NewLabel("Enter tag name:"))
-	content.Add(stringInput)
-	content.Add(createButton)
-
-	tagWindow.SetContent(content)
-	tagWindow.Resize(fyne.NewSize(300, 400))
-	tagWindow.Show()
-
-	updateColor() // Initial color update
 }
 
 func truncateFilename(filename string, maxLength int) string {
@@ -751,6 +512,20 @@ func loadImageResourceThumbnailEfficient(path string) (fyne.Resource, error) {
 	}
 	defer file.Close()
 
+	// exif.RegisterParsers(mknote.All...)
+
+	// exifData, err := exif.Decode(file)
+	// if err != nil {
+	// 	appLogger.Fatal("Exif decoding failed: ", err)
+	// }
+
+	// artist, _ := exifData.Get(exif.Artist)
+	// appLogger.Println(artist.StringVal())
+	// appLogger.Println(exifData)
+	// appLogger.Println(exifData.Get(exif.Artist))
+	// appLogger.Println(exifData.Get(exif.XResolution))
+	// appLogger.Println(exifData.Get(exif.YResolution))
+
 	// Decode the image
 	img, _, err := image.Decode(file)
 	if err != nil {
@@ -815,228 +590,6 @@ func updateContentWithSearchResults(content *fyne.Container, imagePaths []string
 	content.Refresh()
 }
 
-// Modify the createTagDisplay function to include tag removal functionality
-func createTagDisplay(db *sql.DB, imageId int) *fyne.Container {
-	tagDisplay := container.NewAdaptiveGrid(3)
-
-	rows, err := db.Query("SELECT Tag.id, Tag.name, Tag.color FROM ImageTag INNER JOIN Tag ON ImageTag.tagId = Tag.id WHERE ImageTag.imageId = ?", imageId)
-	if err != nil {
-		appLogger.Println("Error querying image tags:", err)
-		return tagDisplay
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var tagId int
-		var tagName, tagColor string
-		if err := rows.Scan(&tagId, &tagName, &tagColor); err != nil {
-			appLogger.Println("Error scanning tag data:", err)
-			continue
-		}
-
-		tagButton := widget.NewButton(tagName, nil)
-		tagButton.Importance = widget.LowImportance
-		c, _ := colorutils.HexToColor(tagColor)
-		rect := canvas.NewRectangle(c)
-		rect.CornerRadius = 5
-
-		tagButton.OnTapped = func() {
-			dialog.ShowConfirm("Remove Tag", "Are you sure you want to remove this tag?", func(remove bool) {
-				if remove {
-					if err := database.RemoveTagFromImage(db, imageId, tagId); err != nil {
-						fmt.Print("createTagDisplay")
-						dialog.ShowError(err, nil)
-					} else {
-						// remove the tag from the tag display
-						// refreshSidebar()
-					}
-				}
-			}, nil)
-		}
-		// New version with padding
-		tagDisplay.Add(container.NewPadded(container.NewStack(rect, tagButton)))
-	}
-
-	return tagDisplay
-}
-
-// Add a settings window
-func showSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB) {
-	settingsWindow := a.NewWindow("Settings")
-
-	// Create a form for database path
-	dbPathEntry := widget.NewEntry()
-	dbPathEntry.SetText(appOptions.DatabasePath) // Set current path
-
-	// Create a form to change the index database location
-	dbPathForm := &widget.Form{
-		Items: []*widget.FormItem{
-			{Text: "Database Path", Widget: dbPathEntry},
-		},
-		OnSubmit: func() {
-			// Here you would implement the logic to change the database path
-			// This might involve closing the current connection, copying the database, and opening a new connection
-			dialog.ShowInformation("Database Path", "Path updated to: "+dbPathEntry.Text, settingsWindow)
-		},
-	}
-
-	// Create a list of all excluded directories
-	blackList := widget.NewList(
-		func() int {
-			return len(appOptions.ExcludedDirs)
-		},
-		func() fyne.CanvasObject {
-			return widget.NewLabel("Excluded directory")
-		},
-		func(id widget.ListItemID, item fyne.CanvasObject) {
-			for excluded := range appOptions.ExcludedDirs {
-				label := item.(*widget.Label)
-				label.SetText(excluded)
-				// widget.NewLabel(excluded)
-			}
-		},
-	)
-
-	// Create a list of all tags
-	tagList := widget.NewList(
-		func() int {
-			// Return the number of tags
-			var count int
-			db.QueryRow("SELECT COUNT(*) FROM Tag").Scan(&count)
-			return count
-		},
-		func() fyne.CanvasObject {
-			return widget.NewLabel("Tag Name")
-		},
-		func(id widget.ListItemID, item fyne.CanvasObject) {
-			label := item.(*widget.Label)
-			var tagName string
-			db.QueryRow("SELECT name FROM Tag WHERE id = ?", id+1).Scan(&tagName)
-			label.SetText(tagName)
-		},
-	)
-
-	timeZone := widget.NewLabel("Timezone in UTC: UTC" + strconv.Itoa(appOptions.Timezone))
-	if appOptions.Timezone > 0 {
-		timeZone = widget.NewLabel("Timezone in UTC: UTC+" + strconv.Itoa(appOptions.Timezone))
-	} else {
-		timeZone = widget.NewLabel("Timezone in UTC: UTC" + strconv.Itoa(appOptions.Timezone))
-	}
-
-	// Create a button to open the theme editor
-	themeEditorButton := widget.NewButton("Theme Editor", func() {
-		showThemeEditorWindow(a, defaultTheme{}, parent)
-	})
-
-	// Create a container for the settings content
-	content := container.NewVBox(
-		dbPathForm,
-		widget.NewLabel("Excluded directories"),
-		blackList,
-		widget.NewLabel("Tags"),
-		tagList,
-		timeZone,
-		themeEditorButton,
-		widget.NewLabel("Default sorting: Date Added, Descending"),
-	)
-
-	settingsWindow.SetContent(content)
-	settingsWindow.Resize(fyne.NewSize(400, 300))
-	settingsWindow.Show()
-}
-
-func showThemeEditorWindow(app fyne.App, currentTheme fyne.Theme, w fyne.Window) {
-	window := app.NewWindow("Theme Editor")
-	window.SetTitle("Theme Editor")
-	colorProperties := []string{
-		"BackgroundColor",
-		"ButtonColor",
-		"DisabledButtonColor",
-		"TextColor",
-		"DisabledTextColor",
-		"IconColor",
-		"DisabledIconColor",
-		"PlaceHolderColor",
-		"PrimaryColor",
-		"HoverColor",
-		"FocusColor",
-		"ScrollBarColor",
-		"ShadowColor",
-		"ErrorColor",
-	}
-	content := container.NewVBox()
-
-	// Create a map to store color previews
-	colorPreviews := make(map[string]*canvas.Rectangle)
-
-	for _, prop := range colorProperties {
-		colorValue := getThemeColor(currentTheme, prop)
-		colorPreview := canvas.NewRectangle(colorValue)
-		colorPreview.CornerRadius = 5
-		colorPreview.SetMinSize(fyne.NewSize(35, 30))
-
-		// Store the color preview in the map
-		colorPreviews[prop] = colorPreview
-
-		changeColorButton := widget.NewButton("Change Color", func() {
-			showColorPickerWindow(prop, colorPreview, currentTheme, app, window)
-		})
-
-		row := container.NewHBox(
-			widget.NewLabel(prop),
-			colorPreview,
-			changeColorButton,
-		)
-		content.Add(row)
-	}
-
-	applyButton := widget.NewButton("Apply Theme", func() {
-		app.Settings().SetTheme(currentTheme)
-		// w.Content().Refresh()
-		window.Close()
-	})
-	content.Add(applyButton)
-
-	window.SetContent(container.NewVScroll(content))
-	window.Resize(fyne.NewSize(600, 400))
-	window.Show()
-}
-
-func getThemeColor(t fyne.Theme, prop string) color.Color {
-	switch prop {
-	case "BackgroundColor":
-		return t.Color("background", theme.VariantDark)
-	case "ButtonColor":
-		return t.Color("button", theme.VariantDark)
-	case "DisabledButtonColor":
-		return t.Color("disabledButton", theme.VariantDark)
-	case "TextColor":
-		return t.Color("foreground", theme.VariantDark)
-	case "DisabledTextColor":
-		return t.Color("disabledForeground", theme.VariantDark)
-	case "IconColor":
-		return t.Color("icon", theme.VariantDark)
-	case "DisabledIconColor":
-		return t.Color("disabledIcon", theme.VariantDark)
-	case "PlaceHolderColor":
-		return t.Color("placeholder", theme.VariantDark)
-	case "PrimaryColor":
-		return t.Color("primary", theme.VariantDark)
-	case "HoverColor":
-		return t.Color("hover", theme.VariantDark)
-	case "FocusColor":
-		return t.Color("focus", theme.VariantDark)
-	case "ScrollBarColor":
-		return t.Color("scrollBar", theme.VariantDark)
-	case "ShadowColor":
-		return t.Color("shadow", theme.VariantDark)
-	case "ErrorColor":
-		return t.Color("error", theme.VariantDark)
-	default:
-		return color.White
-	}
-}
-
 // func setThemeColor(t fyne.Theme, prop string, c color.Color) {
 // 	switch prop {
 // 	case "BackgroundColor":
@@ -1071,99 +624,3 @@ func getThemeColor(t fyne.Theme, prop string) color.Color {
 // 		return
 // 	}
 // }
-
-// func getColorComponentString(c color.Color, component int) string {
-// 	r, g, b, a := c.RGBA()
-// 	switch component {
-// 	case 0:
-// 		return fmt.Sprintf("%d", uint8(r>>8))
-// 	case 1:
-// 		return fmt.Sprintf("%d", uint8(g>>8))
-// 	case 2:
-// 		return fmt.Sprintf("%d", uint8(b>>8))
-// 	case 3:
-// 		return fmt.Sprintf("%d", uint8(a>>8))
-// 	default:
-// 		return "0"
-// 	}
-// }
-
-// func parseColorComponent(s string) uint8 {
-// 	v, err := strconv.ParseUint(s, 10, 8)
-// 	if err != nil {
-// 		return 0
-// 	}
-// 	return uint8(v)
-// }
-
-func showColorPickerWindow(propertyName string, colorPreview *canvas.Rectangle, currentTheme fyne.Theme, a fyne.App, w fyne.Window) {
-	colorPickerWindow := a.NewWindow("Color Picker")
-	colorPickerWindow.SetTitle("Color picker")
-
-	colorPreviewRect := canvas.NewRectangle(color.NRGBA{0, 0, 130, 255})
-	colorPreviewRect.SetMinSize(fyne.NewSize(64, 128))
-	colorPreviewRect.CornerRadius = 5
-
-	var content *fyne.Container
-	var updateColor func()
-
-	if appOptions.UseRGB {
-		r, g, b := widget.NewSlider(0, 255), widget.NewSlider(0, 255), widget.NewSlider(0, 255)
-		updateColor = func() {
-			newColor := color.NRGBA{uint8(r.Value), uint8(g.Value), uint8(b.Value), 255}
-			colorPreviewRect.FillColor = newColor
-			colorPreview.FillColor = newColor
-			// doesn't work
-			// setThemeColor(currentTheme, propertyName, newColor)
-			w.Content().Refresh()
-			colorPreviewRect.Refresh()
-			colorPreview.Refresh()
-		}
-		for _, slider := range []*widget.Slider{r, g, b} {
-			slider.OnChanged = func(_ float64) { updateColor() }
-		}
-		content = container.NewVBox(
-			widget.NewLabel("Color preview:"),
-			colorPreviewRect,
-			widget.NewLabel("Red:"), r,
-			widget.NewLabel("Green:"), g,
-			widget.NewLabel("Blue:"), b,
-		)
-	} else {
-		h, s, v := widget.NewSlider(0, 359), widget.NewSlider(0, 1), widget.NewSlider(0, 1)
-		h.Value, s.Value, v.Value = 200, 0.5, 1
-		h.Step, s.Step, v.Step = 1, 0.01, 0.01
-		updateColor = func() {
-			hex := colorutils.HSVToHex(h.Value, s.Value, v.Value)
-			if newColor, err := colorutils.HexToColor(hex); err == nil {
-				colorPreviewRect.FillColor = newColor
-				colorPreview.FillColor = newColor
-				// doesn't work
-				// setThemeColor(currentTheme, propertyName, newColor)
-				w.Content().Refresh()
-				colorPreviewRect.Refresh()
-				colorPreview.Refresh()
-			}
-		}
-		for _, slider := range []*widget.Slider{h, s, v} {
-			slider.OnChanged = func(_ float64) { updateColor() }
-		}
-		content = container.NewVBox(
-			widget.NewLabel("Color preview:"),
-			colorPreviewRect,
-			widget.NewLabel("Hue:"), h,
-			widget.NewLabel("Saturation:"), s,
-			widget.NewLabel("Value:"), v,
-		)
-	}
-
-	pickColorButton := widget.NewButton("Pick Color", func() {
-		colorPickerWindow.Close()
-	})
-	content.Add(pickColorButton)
-
-	colorPickerWindow.SetContent(content)
-	colorPickerWindow.Resize(fyne.NewSize(300, 400))
-	colorPickerWindow.Show()
-	updateColor() // Initial color update
-}
