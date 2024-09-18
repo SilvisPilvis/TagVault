@@ -57,8 +57,8 @@ func GetImageCount(db *sql.DB) int {
 	return imgCount
 }
 
-func GetImagesFromDatabase(db *sql.DB, imageCount uint) ([]string, error) {
-	images, err := db.Query("SELECT path FROM Image ORDER BY dateAdded DESC LIMIT ?", imageCount)
+func GetImagesFromDatabase(db *sql.DB, page int, imageCount uint) ([]string, error) {
+	images, err := db.Query("SELECT path FROM Image ORDER BY dateAdded DESC LIMIT ?,?", page, imageCount)
 	if err != nil {
 		return nil, err
 	}

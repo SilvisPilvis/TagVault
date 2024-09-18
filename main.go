@@ -67,6 +67,7 @@ var (
 	appOptions    = new(options.Options).InitDefault()
 	optionsExist  = false
 	appLogger     = logger.InitLogger()
+	page          = 0
 )
 
 func main() {
@@ -207,13 +208,44 @@ func main() {
 	controls := container.NewBorder(nil, nil, nil, optContainer, form)
 	mainContainer := container.NewBorder(controls, nil, nil, nil, container.NewPadded(split))
 
-	dbImages, err := database.GetImagesFromDatabase(db, appOptions.ImageNumber)
+	appLogger.Printf("Page: %d, ImageNumber: %d", page, appOptions.ImageNumber)
+
+	dbImages, err := database.GetImagesFromDatabase(db, page, appOptions.ImageNumber)
 	if err != nil {
 		appLogger.Fatal(err)
 	}
+
 	displayImages := createDisplayImagesFunctionFromDb(db, w, sidebar, sidebarScroll, split, a, content, dbImages)
+	// if page > 0 {
+	// 	nextImages, err := database.GetImagesFromDatabase(db, page, appOptions.ImageNumber)
+	// 	if err != nil {
+	// 		appLogger.Fatal("Failed to load more images on scroll: ", err)
+	// 	}
+
+	// 	dbImages = append(dbImages, nextImages...)
+	// }
 	// displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, mainContainer)
 	displayImages("")
+	appLogger.Println("Display images outside scroll listener called")
+
+	// Add event listener to scroll
+	scroll.OnScrolled = func(pos fyne.Position) {
+		if scroll.Offset.Y == 100 {
+			page += 1
+			appLogger.Println("Scrolled to bottom. Current page: ", page)
+			nextImages, err := database.GetImagesFromDatabase(db, page*int(appOptions.ImageNumber), appOptions.ImageNumber)
+			if err != nil {
+				appLogger.Fatal("Failed to load more images on scroll: ", err)
+			}
+
+			dbImages = append(dbImages, nextImages...)
+			for _, image := range dbImages {
+				appLogger.Println(image)
+			}
+			displayImages("")
+		}
+		// appLogger.Println(scroll.Offset.Y)
+	}
 
 	w.SetContent(mainContainer)
 	w.ShowAndRun()
@@ -589,38 +621,3 @@ func updateContentWithSearchResults(content *fyne.Container, imagePaths []string
 
 	content.Refresh()
 }
-
-// func setThemeColor(t fyne.Theme, prop string, c color.Color) {
-// 	switch prop {
-// 	case "BackgroundColor":
-// 		t.Color(fyne.ThemeColorName(prop), theme.VariantDark) // this should return c
-// 	case "ButtonColor":
-// 		t.SetColor("button", theme.VariantDark, c)
-// 	case "DisabledButtonColor":
-// 		t.SetColor("disabledButton", theme.VariantDark, c)
-// 	case "TextColor":
-// 		t.SetColor("foreground", theme.VariantDark, c)
-// 	case "DisabledTextColor":
-// 		t.SetColor("disabledForeground", theme.VariantDark, c)
-// 	case "IconColor":
-// 		t.SetColor("icon", theme.VariantDark, c)
-// 	case "DisabledIconColor":
-// 		t.SetColor("disabledIcon", theme.VariantDark, c)
-// 	case "PlaceHolderColor":
-// 		t.SetColor("placeholder", theme.VariantDark, c)
-// 	case "PrimaryColor":
-// 		t.SetColor("primary", theme.VariantDark, c)
-// 	case "HoverColor":
-// 		t.SetColor("hover", theme.VariantDark, c)
-// 	case "FocusColor":
-// 		t.SetColor("focus", theme.VariantDark, c)
-// 	case "ScrollBarColor":
-// 		t.SetColor("scrollBar", theme.VariantDark, c)
-// 	case "ShadowColor":
-// 		t.SetColor("shadow", theme.VariantDark, c)
-// 	case "ErrorColor":
-// 		t.SetColor("error", theme.VariantDark, c)
-// 	default:
-// 		return
-// 	}
-// }
