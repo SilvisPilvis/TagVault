@@ -221,7 +221,9 @@ func main() {
 
 	// Add event listener to scroll
 	scroll.OnScrolled = func(pos fyne.Position) {
-		if scroll.Offset.Y == 100 && page < 1 {
+		// stupid magic number
+		// why does it increment by 648 when adding the same amound of images with the offset at 100?
+		if scroll.Offset.Y == 100+(float32(page)*648) {
 			page += 1
 			appLogger.Println("Scrolled to bottom. Current page: ", page)
 			appLogger.Println("Skip images: ", page*int(appOptions.ImageNumber))
