@@ -214,37 +214,27 @@ func main() {
 	if err != nil {
 		appLogger.Fatal(err)
 	}
-
 	displayImages := createDisplayImagesFunctionFromDb(db, w, sidebar, sidebarScroll, split, a, content, dbImages)
-	// if page > 0 {
-	// 	nextImages, err := database.GetImagesFromDatabase(db, page, appOptions.ImageNumber)
-	// 	if err != nil {
-	// 		appLogger.Fatal("Failed to load more images on scroll: ", err)
-	// 	}
-
-	// 	dbImages = append(dbImages, nextImages...)
-	// }
 	// displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, mainContainer)
 	displayImages("")
 	appLogger.Println("Display images outside scroll listener called")
 
 	// Add event listener to scroll
 	scroll.OnScrolled = func(pos fyne.Position) {
-		if scroll.Offset.Y == 100 {
+		if scroll.Offset.Y == 100 && page < 1 {
 			page += 1
 			appLogger.Println("Scrolled to bottom. Current page: ", page)
+			appLogger.Println("Skip images: ", page*int(appOptions.ImageNumber))
 			nextImages, err := database.GetImagesFromDatabase(db, page*int(appOptions.ImageNumber), appOptions.ImageNumber)
 			if err != nil {
 				appLogger.Fatal("Failed to load more images on scroll: ", err)
 			}
 
-			dbImages = append(dbImages, nextImages...)
-			for _, image := range dbImages {
-				appLogger.Println(image)
-			}
+			displayImages = createDisplayImagesFunctionFromDb(db, w, sidebar, sidebarScroll, split, a, content, nextImages)
 			displayImages("")
+			content.Refresh()
 		}
-		// appLogger.Println(scroll.Offset.Y)
+		appLogger.Println(scroll.Offset.Y)
 	}
 
 	w.SetContent(mainContainer)
