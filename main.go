@@ -236,7 +236,7 @@ func main() {
 			displayImages("")
 			content.Refresh()
 		}
-		appLogger.Println(scroll.Offset.Y)
+		// appLogger.Println(scroll.Offset.Y)
 	}
 
 	w.SetContent(mainContainer)
