@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"image"
+	"time"
 
 	// "image/color"
 	"image/gif"
@@ -38,12 +39,15 @@ import (
 
 type imageButton struct {
 	widget.BaseWidget
-	onTapped func()
-	image    *canvas.Image
+	image       *canvas.Image
+	onTapped    func()
+	onLongPress func()
+	pressedTime time.Time
+	selected    bool
 }
 
-func newImageButton(resource fyne.Resource, tapped func()) *imageButton {
-	img := &imageButton{onTapped: tapped}
+func newImageButton(resource fyne.Resource, tapped func(), pressed func()) *imageButton {
+	img := &imageButton{onTapped: tapped, onLongPress: pressed}
 	img.ExtendBaseWidget(img)
 	img.image = canvas.NewImageFromResource(resource)
 	img.image.FillMode = canvas.ImageFillContain
@@ -51,14 +55,58 @@ func newImageButton(resource fyne.Resource, tapped func()) *imageButton {
 	return img
 }
 
-func (b *imageButton) CreateRenderer() fyne.WidgetRenderer {
-	return widget.NewSimpleRenderer(b.image)
-}
+// func newImageButton(resource fyne.Resource, tapped func(), pressed func()) *imageButton {
+// 	button := &imageButton{
+// 		image:       image,
+// 		onTapped:    tapped,
+// 		onLongPress: longPress,
+// 	}
+// 	button.ExtendBaseWidget(button)
+// 	return button
+// }
 
 func (b *imageButton) Tapped(*fyne.PointEvent) {
 	if b.onTapped != nil {
 		b.onTapped()
 	}
+}
+
+func (b *imageButton) LongTapped(_ *fyne.PointEvent) {
+	b.handleLongPress()
+}
+
+func (b *imageButton) MouseDown(_ *fyne.PointEvent) {
+	b.pressedTime = time.Now()
+}
+
+func (b *imageButton) MouseUp(_ *fyne.PointEvent) {
+	if time.Since(b.pressedTime) >= 500*time.Millisecond {
+		b.handleLongPress()
+	} else {
+		b.Tapped(nil)
+	}
+}
+
+func (b *imageButton) handleLongPress() {
+	if b.onLongPress != nil {
+		fmt.Print("Long Pressed\n")
+		b.selected = !b.selected
+		b.onLongPress()
+		b.Refresh()
+	}
+}
+
+func (b *imageButton) CreateRenderer() fyne.WidgetRenderer {
+	return widget.NewSimpleRenderer(b.image)
+}
+
+func (r *imageButton) Refresh() {
+	if r.selected {
+		r.image.Translucency = 0.5
+	} else {
+		r.image.Translucency = 0
+	}
+	canvas.Refresh(r.image)
 }
 
 var (
@@ -373,7 +421,7 @@ func createDisplayImagesFunctionFromDb(db *sql.DB, w fyne.Window, sidebar *fyne.
 func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.Container, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App) {
 	// create a placeholder image
 	placeholderResource := fyne.NewStaticResource("placeholder", []byte{})
-	imgButton := newImageButton(placeholderResource, nil)
+	imgButton := newImageButton(placeholderResource, nil, nil)
 	// imgButton := imgbtn.NewImageButton(placeholderResource, nil)
 
 	resourceChan := make(chan fyne.Resource, 1)
@@ -399,6 +447,9 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 	imgButton.onTapped = func() {
 		// updates the sidebar
 		updateSidebar(db, w, path, resource, sidebar, sidebarScroll, split, a, imageContainer)
+	}
+	imgButton.onLongPress = func() {
+		appLogger.Println("Long press on image: ", path)
 	}
 
 	// make a parent container to hold the image button and label
