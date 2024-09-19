@@ -119,7 +119,7 @@ func ShowTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int, tagLis
 	tagWindow.Show()
 
 	go func() {
-		tags, err := db.Query("SELECT id, name, color FROM Tag WHERE id NOT IN (SELECT tagId FROM ImageTag WHERE imageId = ?)", imgId)
+		tags, err := db.Query("SELECT id, name, color FROM Tag WHERE id NOT IN (SELECT tagId FROM FileTag WHERE fileId = ?)", imgId)
 		if err != nil {
 			parent.Canvas().Refresh(parent.Content())
 			fmt.Print("showTagWindow")
@@ -149,7 +149,7 @@ func ShowTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int, tagLis
 			tagID := id
 			button.OnTapped = func() {
 				go func() {
-					_, err := db.Exec("INSERT OR IGNORE INTO ImageTag (imageId, tagId) VALUES (?, ?)", imgId, tagID)
+					_, err := db.Exec("INSERT OR IGNORE INTO FileTag (fileId, tagId) VALUES (?, ?)", imgId, tagID)
 					parent.Content().Refresh()
 					if err != nil {
 						fmt.Print("showTagWindow")
@@ -177,7 +177,7 @@ func ShowTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int, tagLis
 func CreateTagDisplay(db *sql.DB, imageId int, appLogger *log.Logger) *fyne.Container {
 	tagDisplay := container.NewAdaptiveGrid(3)
 
-	rows, err := db.Query("SELECT Tag.id, Tag.name, Tag.color FROM ImageTag INNER JOIN Tag ON ImageTag.tagId = Tag.id WHERE ImageTag.imageId = ?", imageId)
+	rows, err := db.Query("SELECT Tag.id, Tag.name, Tag.color FROM FileTag INNER JOIN Tag ON FileTag.tagId = Tag.id WHERE FileTag.imageId = ?", imageId)
 	if err != nil {
 		appLogger.Println("Error querying image tags:", err)
 		return tagDisplay

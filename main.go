@@ -91,7 +91,7 @@ func main() {
 	if !optionsExist {
 		appLogger.Println("Creating options")
 		appOptions = new(options.Options).InitDefault()
-		appOptions.ExcludedDirs = map[string]int{"Games": 1, "games": 1, "go": 1, "TagVault": 1} // try to add filepath.Base(os.Getwd()): 1
+		appOptions.ExcludedDirs = map[string]int{"Games": 1, "games": 1, "go": 1, "TagVault": 1, "Android": 1, "android": 1, "node_modules": 1} // try to add filepath.Base(os.Getwd()): 1
 	} else {
 		appLogger.Println("Loading options")
 		appOptions, err = options.LoadOptionsFromDB(db)

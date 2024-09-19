@@ -36,9 +36,9 @@ func Init() *sql.DB {
 func setupTables(db *sql.DB) {
 	tables := []string{
 		"CREATE TABLE IF NOT EXISTS `Tag`(`id` INTEGER PRIMARY KEY NOT NULL, `name` VARCHAR(255) NOT NULL, `color` VARCHAR(7) NOT NULL);",
-		"CREATE TABLE IF NOT EXISTS `Image`(`id` INTEGER PRIMARY KEY NOT NULL, `path` VARCHAR(1024) NOT NULL, `dateAdded` DATETIME NOT NULL);",
-		"CREATE INDEX IF NOT EXISTS idx_image_path ON Image(path);",
-		"CREATE TABLE IF NOT EXISTS `ImageTag`(`imageId` INTEGER NOT NULL, `tagId` INTEGER NOT NULL);",
+		"CREATE TABLE IF NOT EXISTS `File`(`id` INTEGER PRIMARY KEY NOT NULL, `path` VARCHAR(1024) NOT NULL, `dateAdded` DATETIME NOT NULL);",
+		"CREATE INDEX IF NOT EXISTS idx_image_path ON File(path);",
+		"CREATE TABLE IF NOT EXISTS `FileTag`(`id` INTEGER PRIMARY KEY NOT NULL, `fileId` INTEGER NOT NULL, `tagId` INTEGER NOT NULL);",
 		"CREATE TABLE IF NOT EXISTS `Options`(`DatabasePath` VARCHAR(255) NOT NULL, `ExcludedDirs` VARCHAR(255) NOT NULL, `Timezone` VARCHAR(1024) NOT NULL, `SortDesc` BOOLEAN DEFAULT true, `UseRGB` BOOLEAN DEFAULT false, `ImageNumber` INTEGER NOT NULL DEFAULT 20, `ThumbnailSize` INTEGER NOT NULL DEFAULT 256, `Profiling` BOOLEAN DEFAULT false, `ExifFields` VARCHAR(255));",
 	}
 	for _, table := range tables {
@@ -50,16 +50,16 @@ func setupTables(db *sql.DB) {
 
 func GetImageCount(db *sql.DB) int {
 	var imgCount int
-	count, err := db.Query("SELECT DISTINCT count(id) FROM Image;")
+	count, err := db.Query("SELECT DISTINCT count(id) FROM File;")
 	if err != nil {
-		appLogger.Println("Error getting image count:", err)
+		appLogger.Println("Error getting file count:", err)
 	}
 	count.Scan(&imgCount)
 	return imgCount
 }
 
 func GetImagesFromDatabase(db *sql.DB, page int, imageCount uint) ([]string, error) {
-	images, err := db.Query("SELECT path FROM Image ORDER BY dateAdded DESC LIMIT ?,?", page, imageCount)
+	images, err := db.Query("SELECT path FROM File ORDER BY dateAdded DESC LIMIT ?,?", page, imageCount)
 	if err != nil {
 		return nil, err
 	}
@@ -79,9 +79,9 @@ func GetImagesFromDatabase(db *sql.DB, page int, imageCount uint) ([]string, err
 
 func GetImageId(db *sql.DB, path string) int {
 	var imageId int
-	err := db.QueryRow("SELECT id FROM Image WHERE path = ?", path).Scan(&imageId)
+	err := db.QueryRow("SELECT id FROM File WHERE path = ?", path).Scan(&imageId)
 	if err != nil {
-		appLogger.Println("Error getting image ID:", err)
+		appLogger.Println("Error getting file ID:", err)
 		return 0
 	}
 	return imageId
@@ -89,7 +89,7 @@ func GetImageId(db *sql.DB, path string) int {
 
 func GetDate(db *sql.DB, path string) string {
 	var date string
-	err := db.QueryRow("SELECT STRFTIME('%H:%M %d-%m-%Y', DATETIME(dateAdded, '+3 HOURS')) FROM Image WHERE path = ?", path).Scan(&date)
+	err := db.QueryRow("SELECT STRFTIME('%H:%M %d-%m-%Y', DATETIME(dateAdded, '+3 HOURS')) FROM File WHERE path = ?", path).Scan(&date)
 	if err != nil {
 		appLogger.Println("Error getting date:", err)
 		return ""
@@ -98,7 +98,7 @@ func GetDate(db *sql.DB, path string) string {
 }
 
 func GetImagePathsByTag(db *sql.DB, tagName string) ([]string, error) {
-	query := `SELECT DISTINCT Image.path FROM Image JOIN ImageTag ON Image.id = ImageTag.imageId JOIN Tag ON ImageTag.tagId = Tag.id WHERE Tag.name LIKE ?`
+	query := `SELECT DISTINCT File.path FROM File JOIN FileTag ON File.id = FileTag.fileId JOIN Tag ON FileTag.tagId = Tag.id WHERE Tag.name LIKE ?`
 	// query := `
 	// SELECT DISTINCT Image.path
 	// FROM Image
@@ -139,10 +139,10 @@ func GetImagePathsByTag(db *sql.DB, tagName string) ([]string, error) {
 // Function to handle tag-based search
 func SearchImagesByTag(db *sql.DB, tagName string) ([]string, error) {
 	query := `
-		SELECT DISTINCT Image.path
-		FROM Image
-		JOIN ImageTag ON Image.id = ImageTag.imageId
-		JOIN Tag ON ImageTag.tagId = Tag.id
+		SELECT DISTINCT File.path
+		FROM File
+		JOIN FileTag ON File.id = FileTag.fileId
+		JOIN Tag ON FileTag.tagId = Tag.id
 		WHERE Tag.name LIKE ?
 	`
 	rows, err := db.Query(query, tagName)
@@ -184,7 +184,7 @@ func DiscoverImages(db *sql.DB, blacklist map[string]int) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	appLogger.Println("Created timeout context")
-	stmt, err := db.PrepareContext(ctx, "INSERT INTO Image (path, dateAdded) SELECT ?, DATETIME('now') WHERE NOT EXISTS (SELECT 1 FROM Image WHERE path = ?)")
+	stmt, err := db.PrepareContext(ctx, "INSERT INTO File (path, dateAdded) SELECT ?, DATETIME('now') WHERE NOT EXISTS (SELECT 1 FROM File WHERE path = ?)")
 	if err != nil {
 		return false, fmt.Errorf("error preparing SQL statement: %w", err)
 	}
@@ -216,14 +216,14 @@ func DiscoverImages(db *sql.DB, blacklist map[string]int) (bool, error) {
 		}
 	}
 
-	appLogger.Println("Discovery Complete. Added or Discovered ", count, " new images.")
+	appLogger.Println("Discovery Complete. Added or Discovered ", count, " new files.")
 
 	return true, nil
 }
 
 // Add a function to remove a tag from an image
 func RemoveTagFromImage(db *sql.DB, imageId int, tagId int) error {
-	_, err := db.Exec("DELETE FROM ImageTag WHERE imageId = ? AND tagId = ?", imageId, tagId)
+	_, err := db.Exec("DELETE FROM FileTag WHERE fileId = ? AND tagId = ?", imageId, tagId)
 	return err
 }
 

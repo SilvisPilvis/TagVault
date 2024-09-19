@@ -20,6 +20,7 @@ Coming soon:
 - [ ] Multi select
 - [ ] Archive
 - [ ] Compress
+- [ ] GIFs will GIF
 - [ ] Convert
 - [ ] Sorting Currently sorts by date added
 

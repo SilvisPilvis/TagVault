@@ -48,7 +48,7 @@ func (opts Options) InitDefault() *Options {
 
 func CheckOptionsExists(db *sql.DB) (bool, error) {
 	// Execute SQL statement
-	rows, err := db.Query("SELECT * FROM options;")
+	rows, err := db.Query("SELECT * FROM Options;")
 	if err != nil {
 		return false, fmt.Errorf("error executing statement: %v", err)
 	}
@@ -71,7 +71,7 @@ func SaveOptionsToDB(db *sql.DB, options *Options) error {
 
 	// Prepare SQL statement
 	stmt, err := db.Prepare(`
-		INSERT OR REPLACE INTO options (
+		INSERT OR REPLACE INTO Options (
 			DatabasePath, ExcludedDirs, Profiling, Timezone, SortDesc, 
 			UseRGB, ExifFields, ImageNumber, ThumbnailSize
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
