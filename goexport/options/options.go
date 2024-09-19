@@ -126,6 +126,7 @@ func LoadOptionsFromDB(db *sql.DB) (*Options, error) {
 		&options.ThumbnailSize,
 		&options.FirstBoot,
 	)
+	options.FirstBoot = false
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return options, nil // Return default options if no row found

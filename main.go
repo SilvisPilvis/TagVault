@@ -70,9 +70,6 @@ var (
 )
 
 func main() {
-	if appOptions.Profiling {
-		profiling.SetupProfiling()
-	}
 
 	db := database.Init()
 	defer db.Close()
@@ -90,6 +87,10 @@ func main() {
 		appLogger.Println("Creating options")
 		appOptions = new(options.Options).InitDefault()
 		appOptions.ExcludedDirs = map[string]int{"Games": 1, "games": 1, "go": 1, "TagVault": 1, "Android": 1, "android": 1, "node_modules": 1} // try to add filepath.Base(os.Getwd()): 1
+		err = options.SaveOptionsToDB(db, appOptions)
+		if err != nil {
+			appLogger.Println("Failed to save Opttions: ", err)
+		}
 	} else {
 		appLogger.Println("Loading options")
 		appOptions, err = options.LoadOptionsFromDB(db)
@@ -98,6 +99,10 @@ func main() {
 		}
 		appLogger.Println(appOptions.ExcludedDirs)
 		// appOptions.ExcludedDirs = map[string]int{"Games": 1, "games": 1, "go": 1, "TagVault": 1}
+	}
+
+	if appOptions.Profiling {
+		profiling.SetupProfiling()
 	}
 
 	appLogger.Println("ExcludedDirsLen: ", len(appOptions.ExcludedDirs))
@@ -213,11 +218,10 @@ func main() {
 	appLogger.Printf("Page: %d, ImageNumber: %d", page, appOptions.ImageNumber)
 
 	if appOptions.FirstBoot {
+		appLogger.Println("This is first boot")
 		homeDir, _ := os.UserHomeDir()
-		// dbImages, _ = filepath.Glob(homeDir + "*")
-		// appLogger.Println("First boot images: ", dbImages)
 		displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, content)
-		displayImages(homeDir + "/Pictures")
+		displayImages(homeDir + "/Pictures/wallpapers")
 	} else {
 		dbImages, err := database.GetImagesFromDatabase(db, page, appOptions.ImageNumber)
 		if err != nil {
@@ -232,7 +236,7 @@ func main() {
 	scroll.OnScrolled = func(pos fyne.Position) {
 		// stupid magic number
 		// why does it increment by 648 when adding the same amound of images with the offset at 100?
-		if scroll.Offset.Y == 100+(float32(page)*648) {
+		if scroll.Offset.Y == 100+(float32(page)*648) && !appOptions.FirstBoot {
 			page += 1
 			appLogger.Println("Scrolled to bottom. Current page: ", page)
 			appLogger.Println("Skip images: ", page*int(appOptions.ImageNumber))
@@ -245,7 +249,7 @@ func main() {
 			displayImages("")
 			content.Refresh()
 		}
-		// appLogger.Println(scroll.Offset.Y)
+		// applogger.println(scroll.offset.y)
 	}
 
 	w.SetContent(mainContainer)

@@ -39,7 +39,7 @@ func setupTables(db *sql.DB) {
 		"CREATE TABLE IF NOT EXISTS `File`(`id` INTEGER PRIMARY KEY NOT NULL, `path` VARCHAR(1024) NOT NULL, `dateAdded` DATETIME NOT NULL);",
 		"CREATE INDEX IF NOT EXISTS idx_image_path ON File(path);",
 		"CREATE TABLE IF NOT EXISTS `FileTag`(`id` INTEGER PRIMARY KEY NOT NULL, `fileId` INTEGER NOT NULL, `tagId` INTEGER NOT NULL);",
-		"CREATE TABLE IF NOT EXISTS `Options`(`DatabasePath` VARCHAR(255) NOT NULL, `ExcludedDirs` VARCHAR(255) NOT NULL, `Timezone` VARCHAR(1024) NOT NULL, `SortDesc` BOOLEAN DEFAULT true, `UseRGB` BOOLEAN DEFAULT false, `ImageNumber` INTEGER NOT NULL DEFAULT 20, `ThumbnailSize` INTEGER NOT NULL DEFAULT 256, `Profiling` BOOLEAN DEFAULT false, `ExifFields` VARCHAR(255));",
+		"CREATE TABLE IF NOT EXISTS `Options`(`DatabasePath` VARCHAR(255) NOT NULL, `ExcludedDirs` VARCHAR(255) NOT NULL, `Timezone` VARCHAR(1024) NOT NULL, `SortDesc` BOOLEAN DEFAULT true, `UseRGB` BOOLEAN DEFAULT false, `ImageNumber` INTEGER NOT NULL DEFAULT 20, `ThumbnailSize` INTEGER NOT NULL DEFAULT 256, `Profiling` BOOLEAN DEFAULT false, `ExifFields` VARCHAR(255), `FirstBoot` BOOLEAN DEFAULT false);",
 	}
 	for _, table := range tables {
 		if _, err := db.Exec(table); err != nil {
@@ -197,7 +197,7 @@ func DiscoverImages(db *sql.DB, blacklist map[string]int) (bool, error) {
 				return fmt.Errorf("error walking path %s: %w", path, err)
 			}
 			if info.IsDir() && options.IsExcludedDir(path, blacklist) {
-				appLogger.Println("Skipping hidden/exluded directory: ", info.Name())
+				appLogger.Println("Skipping hidden/blacklisted directory: ", info.Name())
 				// Skip path if path is a hidden dir or in excluded dirs
 				return filepath.SkipDir
 			}
