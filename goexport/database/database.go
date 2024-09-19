@@ -9,6 +9,7 @@ import (
 	"main/goexport/options"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -18,7 +19,7 @@ import (
 var appLogger = logger.InitLogger()
 
 func Init() *sql.DB {
-	db, err := sql.Open("sqlite3", "file:./index.db?_timeout=10000&_busy_timeout=10000")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:%s.db?timeout=10000&_busy_timeout=10000", runtime.GOOS))
 	if err != nil {
 		appLogger.Fatal("Failed to open database: ", err)
 	}

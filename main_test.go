@@ -3,9 +3,8 @@ package main_test
 import (
 	"main/goexport/fileutils"
 	"path/filepath"
-	"testing"
-
 	"strings"
+	"testing"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -16,11 +15,11 @@ import (
 var (
 	t         *testing.T
 	testApp   = test.NewApp()
-	window    = setupMainWindowTest(testApp, t)
+	window    = setupMainWindowTest(testApp)
 	blackList = map[string]int{"go": 1, "Games": 1, "games": 1}
 )
 
-func setupMainWindowTest(a fyne.App, t *testing.T) fyne.Window {
+func setupMainWindowTest(a fyne.App) fyne.Window {
 	w := a.NewWindow("Tag Vault")
 	w.SetTitle("Tag Vault")
 

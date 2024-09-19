@@ -1,18 +1,18 @@
 package utilwindows
 
 import (
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/canvas"
-	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/widget"
-
 	"database/sql"
 	"image/color"
 	"main/goexport/apptheme"
 	"main/goexport/colorutils"
 	"main/goexport/options"
 	"strconv"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/widget"
 )
 
 func ShowThemeEditorWindow(app fyne.App, currentTheme fyne.Theme, w fyne.Window, opts *options.Options) {
@@ -208,6 +208,15 @@ func ShowSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *option
 		timeZone = widget.NewLabel("Timezone in UTC: UTC" + strconv.Itoa(opts.Timezone))
 	}
 
+	saveOptionsButton := widget.NewButton("Save Options", func() {
+		err := options.SaveOptionsToDB(db, opts)
+		if err == nil {
+			dialog.ShowInformation("Success", "Options saved successfully", settingsWindow)
+		} else {
+			dialog.ShowError(err, settingsWindow)
+		}
+	})
+
 	// Create a button to open the theme editor
 	// themeEditorButton := widget.NewButton("Theme Editor", func() {
 	// 	ShowThemeEditorWindow(a, apptheme.DefaultTheme{}, parent, opts)
@@ -223,6 +232,7 @@ func ShowSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *option
 		timeZone,
 		// themeEditorButton,
 		widget.NewLabel("Default sorting: Date Added, Descending"),
+		saveOptionsButton,
 	)
 
 	settingsWindow.SetContent(content)

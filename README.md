@@ -27,7 +27,7 @@ Current supported image types:
 - [x] JPG/JPEG
 - [x] PNG
 - [ ] BMP
-- [ ] GIF
+- [x] GIF
 - [ ] HEIC
 - [ ] RAW
 - [ ] TIFF
@@ -35,7 +35,7 @@ Current supported image types:
 - [ ] SVG
 - [ ] AVIF
 - [ ] QOI
-- [ ] JPEGXL
+- [ ] JPEGXL Someday... Maybe... Possibly...?
 
 
 ## App Demo Images:

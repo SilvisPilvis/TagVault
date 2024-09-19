@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -33,7 +34,7 @@ func IsExcludedDir(dir string, blackList map[string]int) bool {
 
 func (opts Options) InitDefault() *Options {
 	return &Options{
-		DatabasePath:  "./index.db",
+		DatabasePath:  fmt.Sprintf("./%s.db", runtime.GOOS),
 		ExcludedDirs:  map[string]int{},
 		Profiling:     false,
 		Timezone:      3,
@@ -46,7 +47,6 @@ func (opts Options) InitDefault() *Options {
 }
 
 func CheckOptionsExists(db *sql.DB) (bool, error) {
-
 	// Execute SQL statement
 	rows, err := db.Query("SELECT * FROM options;")
 	if err != nil {
