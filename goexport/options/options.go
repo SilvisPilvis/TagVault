@@ -19,6 +19,7 @@ type Options struct {
 	ExifFields    []string // exif fields to display in the sidebar
 	ImageNumber   uint
 	ThumbnailSize int
+	FirstBoot     bool
 }
 
 func IsExcludedDir(dir string, blackList map[string]int) bool {
@@ -43,6 +44,7 @@ func (opts Options) InitDefault() *Options {
 		ExifFields:    []string{"DateTime"},
 		ImageNumber:   20,
 		ThumbnailSize: 256,
+		FirstBoot:     true,
 	}
 }
 
@@ -73,8 +75,8 @@ func SaveOptionsToDB(db *sql.DB, options *Options) error {
 	stmt, err := db.Prepare(`
 		INSERT OR REPLACE INTO Options (
 			DatabasePath, ExcludedDirs, Profiling, Timezone, SortDesc, 
-			UseRGB, ExifFields, ImageNumber, ThumbnailSize
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+			UseRGB, ExifFields, ImageNumber, ThumbnailSize, FirstBoot
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return fmt.Errorf("error preparing statement: %v", err)
@@ -92,6 +94,7 @@ func SaveOptionsToDB(db *sql.DB, options *Options) error {
 		string(exifFieldsJSON),
 		options.ImageNumber,
 		options.ThumbnailSize,
+		options.FirstBoot,
 	)
 	if err != nil {
 		return fmt.Errorf("error executing statement: %v", err)
@@ -105,7 +108,7 @@ func LoadOptionsFromDB(db *sql.DB) (*Options, error) {
 
 	row := db.QueryRow(`
 		SELECT DatabasePath, ExcludedDirs, Profiling, Timezone, SortDesc, 
-			   UseRGB, ExifFields, ImageNumber, ThumbnailSize
+			   UseRGB, ExifFields, ImageNumber, ThumbnailSize, FirstBoot
 		FROM options LIMIT 1
 	`)
 
@@ -121,6 +124,7 @@ func LoadOptionsFromDB(db *sql.DB) (*Options, error) {
 		&exifFieldsJSON,
 		&options.ImageNumber,
 		&options.ThumbnailSize,
+		&options.FirstBoot,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {

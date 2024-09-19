@@ -202,6 +202,9 @@ func main() {
 	})
 	filterButton.Icon = loadFilterButton
 
+	// testButton := widget.NewButton("Test", func() {
+	// })
+
 	optContainer := container.NewAdaptiveGrid(2, filterButton, settingsButton)
 
 	controls := container.NewBorder(nil, nil, nil, optContainer, form)
@@ -209,14 +212,21 @@ func main() {
 
 	appLogger.Printf("Page: %d, ImageNumber: %d", page, appOptions.ImageNumber)
 
-	dbImages, err := database.GetImagesFromDatabase(db, page, appOptions.ImageNumber)
-	if err != nil {
-		appLogger.Fatal(err)
+	if appOptions.FirstBoot {
+		homeDir, _ := os.UserHomeDir()
+		// dbImages, _ = filepath.Glob(homeDir + "*")
+		// appLogger.Println("First boot images: ", dbImages)
+		displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, content)
+		displayImages(homeDir + "/Pictures")
+	} else {
+		dbImages, err := database.GetImagesFromDatabase(db, page, appOptions.ImageNumber)
+		if err != nil {
+			appLogger.Fatal(err)
+		}
+		displayImages := createDisplayImagesFunctionFromDb(db, w, sidebar, sidebarScroll, split, a, content, dbImages)
+		displayImages("")
+		appLogger.Println("Display images outside scroll listener called")
 	}
-	displayImages := createDisplayImagesFunctionFromDb(db, w, sidebar, sidebarScroll, split, a, content, dbImages)
-	// displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, mainContainer)
-	displayImages("")
-	appLogger.Println("Display images outside scroll listener called")
 
 	// Add event listener to scroll
 	scroll.OnScrolled = func(pos fyne.Position) {
@@ -231,7 +241,7 @@ func main() {
 				appLogger.Fatal("Failed to load more images on scroll: ", err)
 			}
 
-			displayImages = createDisplayImagesFunctionFromDb(db, w, sidebar, sidebarScroll, split, a, content, nextImages)
+			displayImages := createDisplayImagesFunctionFromDb(db, w, sidebar, sidebarScroll, split, a, content, nextImages)
 			displayImages("")
 			content.Refresh()
 		}
