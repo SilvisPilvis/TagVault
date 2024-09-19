@@ -7,6 +7,7 @@ import (
 	"image"
 
 	// "image/color"
+	"image/gif"
 	"image/jpeg"
 	"image/png"
 	"main/goexport/apptheme"
@@ -283,7 +284,7 @@ func createDisplayImagesFunction(db *sql.DB, w fyne.Window, sidebar *fyne.Contai
 		// loop through images
 		for _, file := range files {
 			// check if it's an image
-			if !file.IsDir() && fileutils.IsImageFile(file.Name()) {
+			if !file.IsDir() && fileutils.IsImageFileMap(file.Name()) {
 				// get full image path
 				imgPath := filepath.Join(dir, file.Name())
 				wg.Add(1)
@@ -431,13 +432,13 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	sidebar.Add(container.NewPadded(container.NewGridWithColumns(2, addTagButton, createTagButton)))
 
 	// Show sidebar if hidden else show
-	// if sidebarScroll.Visible() {
-	// sidebarScroll.Hide()
-	// split.Offset = 0
-	// } else {
-	// sidebarScroll.Show()
-	// split.Offset = 0.65 // was 0.7 by default
-	// }
+	//if sidebarScroll.Visible() {
+	//	sidebarScroll.Hide()
+	//	split.Offset = 0
+	//} else {
+	//	sidebarScroll.Show()
+	//	split.Offset = 0.65 // was 0.7 by default
+	//}
 	sidebarScroll.Show()
 	split.Offset = 0.65
 	imageContainer.Refresh()
@@ -587,6 +588,8 @@ func loadImageResourceThumbnailEfficient(path string) (fyne.Resource, error) {
 		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
 	case ".png":
 		err = png.Encode(&buf, thumbImg)
+	case ".gif":
+		err = gif.Encode(&buf, thumbImg, &gif.Options{NumColors: 256})
 	default:
 		return nil, fmt.Errorf("unsupported image format")
 	}

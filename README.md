@@ -21,6 +21,7 @@ Coming soon:
 - [ ] Archive
 - [ ] Compress
 - [ ] Convert
+- [ ] Sorting Currently sorts by date added
 
 Current supported image types:
 - [x] JPG/JPEG

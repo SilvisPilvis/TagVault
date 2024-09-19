@@ -1,6 +1,7 @@
 package main_test
 
 import (
+	"main/goexport/fileutils"
 	"path/filepath"
 	"testing"
 
@@ -18,6 +19,16 @@ var (
 	window    = setupMainWindowTest(testApp, t)
 	blackList = map[string]int{"go": 1, "Games": 1, "games": 1}
 )
+
+func setupMainWindowTest(a fyne.App, t *testing.T) fyne.Window {
+	w := a.NewWindow("Tag Vault")
+	w.SetTitle("Tag Vault")
+
+	w.SetContent(container.NewPadded())
+	w.Resize(fyne.NewSize(1000, 600))
+
+	return w
+}
 
 func TestMainWindowCreation(t *testing.T) {
 	// Check if the window was created
@@ -62,6 +73,19 @@ func TestWindowTitle(t *testing.T) {
 	assert.Equal(t, "Tag Vault", window.Title(), "Incorrect window title")
 }
 
+func TestIsImageFile(t *testing.T) {
+	// Check the window title
+	assert.True(t, fileutils.IsImageFileMap("image.png"), "Check Image file test failed")
+}
+
+func TestNotImageFile(t *testing.T) {
+	// Check the window title
+	testFiles := []string{"amogus.sus", "big.chungus", "sigma.mail"}
+	for _, v := range testFiles {
+		assert.False(t, fileutils.IsImageFileMap(v), "Check Image file test failed")
+	}
+}
+
 func TestDirectoryExclusionHidden(t *testing.T) {
 	// Check the window title
 	assert.True(t, isExcludedDir("/home/amaterasu/.cache", blackList), "Hidden Directory is not excluded")
@@ -89,14 +113,4 @@ func isExcludedDir(dir string, blackList map[string]int) bool {
 	// checks if the path is a hidden directory
 	// Claude solution
 	return strings.HasPrefix(filepath.Base(dir), ".")
-}
-
-func setupMainWindowTest(a fyne.App, t *testing.T) fyne.Window {
-	w := a.NewWindow("Tag Vault")
-	w.SetTitle("Tag Vault")
-
-	w.SetContent(container.NewPadded())
-	w.Resize(fyne.NewSize(1000, 600))
-
-	return w
 }
