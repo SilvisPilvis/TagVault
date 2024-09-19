@@ -303,11 +303,12 @@ func createDisplayImagesFunction(db *sql.DB, w fyne.Window, sidebar *fyne.Contai
 			wg.Wait()
 
 			// images finished loading so stop & remove loading bar & loading message
-			loadingIndicator.Stop()
+
 			// loadingMessage.Hide()
+			// loadingIndicator.Hide()
+			loadingIndicator.Stop()
 			content.Remove(loadingMessage)
 			content.Remove(loadingIndicator)
-			// loadingIndicator.Hide()
 			// refresh the container that contains images
 			canvas.Refresh(content)
 		}()
