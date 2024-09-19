@@ -239,3 +239,17 @@ func ShowSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *option
 	settingsWindow.Resize(fyne.NewSize(400, 300))
 	settingsWindow.Show()
 }
+
+func ShowChooseDirWindow(a fyne.App) {
+	chooseDirWindow := a.NewWindow("Choose a directory where your pictures are stored")
+	content := container.NewVBox(
+		widget.NewLabel("Choose a directory where your pictures are stored"),
+	)
+  startDir := "C:\\"
+  err := errors.New("failed to get home directory")
+  dialog.ShowFolderOpen(func(dir fyne.ListableURI, err error) {
+    
+  }(startDir, err)
+	chooseDirWindow.SetContent(content)
+	chooseDirWindow.ShowAndRun()
+}
