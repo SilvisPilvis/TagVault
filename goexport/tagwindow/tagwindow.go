@@ -177,7 +177,7 @@ func ShowTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int, tagLis
 func CreateTagDisplay(db *sql.DB, imageId int, appLogger *log.Logger) *fyne.Container {
 	tagDisplay := container.NewAdaptiveGrid(3)
 
-	rows, err := db.Query("SELECT Tag.id, Tag.name, Tag.color FROM FileTag INNER JOIN Tag ON FileTag.tagId = Tag.id WHERE FileTag.imageId = ?", imageId)
+	rows, err := db.Query("SELECT Tag.id, Tag.name, Tag.color FROM FileTag INNER JOIN Tag ON FileTag.tagId = Tag.id WHERE FileTag.fileId = ?", imageId)
 	if err != nil {
 		appLogger.Println("Error querying image tags:", err)
 		return tagDisplay

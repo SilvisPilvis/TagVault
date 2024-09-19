@@ -34,8 +34,6 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	// "github.com/rwcarlsen/goexif/exif"
-	// "github.com/rwcarlsen/goexif/mknote"
 )
 
 type imageButton struct {
