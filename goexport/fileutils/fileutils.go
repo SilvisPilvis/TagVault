@@ -24,6 +24,7 @@ var (
 		".avif": true,
 		".avi":  true,
 		".qoi":  true,
+		".ico":  true,
 	}
 )
 
