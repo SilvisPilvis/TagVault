@@ -4,12 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"main/goexport/fileutils"
 	"main/goexport/logger"
 	"main/goexport/options"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -164,6 +166,15 @@ func SearchImagesByTag(db *sql.DB, tagName string) ([]string, error) {
 	return imagePaths, nil
 }
 
+func replaceHomeDir(path string) string {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		log.Println("Error getting user home directory:", err)
+		return path
+	}
+	return strings.Replace(path, homeDir, "~", 1)
+}
+
 func DiscoverImages(db *sql.DB, blacklist map[string]int) (bool, error) {
 	userHome, err := os.UserHomeDir()
 	if err != nil {
@@ -197,7 +208,26 @@ func DiscoverImages(db *sql.DB, blacklist map[string]int) (bool, error) {
 				return fmt.Errorf("error walking path %s: %w", path, err)
 			}
 			if info.IsDir() && options.IsExcludedDir(path, blacklist) {
-				appLogger.Println("Skipping hidden/blacklisted directory: ", info.Name())
+				var isExcluded string
+
+				stmt, err := db.Prepare(`SELECT 1 FROM File WHERE path like ? LIMIT 1;`)
+				if err != nil {
+					return fmt.Errorf("error preparing SQL statement: %w", err)
+				}
+
+				err = stmt.QueryRow(`"%"` + path + `%"`).Scan(&isExcluded)
+				if err != nil {
+					if err == sql.ErrNoRows {
+						appLogger.Printf("No rows found for path: %s", path)
+					}
+					appLogger.Printf("Error querying database: %v", err)
+				}
+
+				appLogger.Println("Is in db: ", isExcluded)
+				// db.Exec("DELETE FROM File WHERE path like ?", pathLike)
+
+				// appLogger.Println("Skipping hidden/blacklisted directory: ", info.Name())
+				appLogger.Println("Skipping hidden/blacklisted directory: ", replaceHomeDir(path))
 				// Skip path if path is a hidden dir or in excluded dirs
 				return filepath.SkipDir
 			}

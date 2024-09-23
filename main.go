@@ -163,6 +163,7 @@ var (
 	appLogger     = logger.InitLogger()
 	page          = 0
 	selectedFiles = []string{}
+	home, _       = os.UserHomeDir()
 )
 
 func main() {
@@ -171,38 +172,6 @@ func main() {
 
 	appLogger.Println("Check Obsidian Todo list")
 	appLogger.Println("Make displayImages work with getImagesFromDatabase")
-
-	optionsExist, err := options.CheckOptionsExists(db)
-	if err != nil {
-		appLogger.Println(err)
-	}
-	appLogger.Println("Do options exist? ", optionsExist)
-
-	if !optionsExist {
-		appLogger.Println("Creating options")
-		appOptions = new(options.Options).InitDefault()
-		appOptions.ExcludedDirs = map[string]int{"Games": 1, "games": 1, "go": 1, "TagVault": 1, "Android": 1, "android": 1, "node_modules": 1} // try to add filepath.Base(os.Getwd()): 1
-		err = options.SaveOptionsToDB(db, appOptions)
-		if err != nil {
-			appLogger.Println("Failed to save Opttions: ", err)
-		}
-	} else {
-		appLogger.Println("Loading options")
-		appOptions, err = options.LoadOptionsFromDB(db)
-		if err != nil {
-			appLogger.Println("Error loading options: ", err)
-		}
-		appLogger.Println(appOptions.ExcludedDirs)
-		// appOptions.ExcludedDirs = map[string]int{"Games": 1, "games": 1, "go": 1, "TagVault": 1}
-	}
-
-	if appOptions.Profiling {
-		profiling.SetupProfiling()
-	}
-
-	appLogger.Println("ExcludedDirsLen: ", len(appOptions.ExcludedDirs))
-	appLogger.Println("ExcludedDirs: ", appOptions.ExcludedDirs)
-	appLogger.Println("If there are no images in the directory then add the highest directory that contains images to the ExcludedDirs list")
 
 	// appLogger.Println("Downloading ffmpeg")
 	// err := ffmpeg.DownloadFFmpegLinux()
@@ -241,6 +210,38 @@ func main() {
 
 	a := app.NewWithID("TagVault")
 	w := setupMainWindow(a)
+
+	optionsExist, err := options.CheckOptionsExists(db)
+	if err != nil {
+		appLogger.Println(err)
+	}
+	appLogger.Println("Do options exist? ", optionsExist)
+
+	if !optionsExist {
+		appLogger.Println("Creating options")
+		appOptions = new(options.Options).InitDefault()
+		appOptions.ExcludedDirs = map[string]int{"Games": 1, "games": 1, "go": 1, "TagVault": 1, "Android": 1, "android": 1, "node_modules": 1} // try to add filepath.Base(os.Getwd()): 1
+		utilwindows.ShowChooseDirWindow(a, appOptions, appLogger, db)
+		err = options.SaveOptionsToDB(db, appOptions)
+		if err != nil {
+			appLogger.Println("Failed to save Options: ", err)
+		}
+	} else {
+		appLogger.Println("Loading options")
+		appOptions, err = options.LoadOptionsFromDB(db)
+		if err != nil {
+			appLogger.Println("Error loading options: ", err)
+		}
+		appLogger.Println(appOptions.ExcludedDirs)
+		// appOptions.ExcludedDirs = map[string]int{"Games": 1, "games": 1, "go": 1, "TagVault": 1}
+	}
+
+	if appOptions.Profiling {
+		profiling.SetupProfiling()
+	}
+
+	// appLogger.Println("ExcludedDirsLen: ", len(appOptions.ExcludedDirs))
+	// appLogger.Println("If there are no images in the directory then add the highest directory that contains images to the ExcludedDirs list")
 
 	a.Settings().SetTheme(&apptheme.DefaultTheme{})
 
@@ -304,15 +305,14 @@ func main() {
 	})
 	filterButton.Icon = loadFilterButton
 
-	// testButton := widget.NewButton("Test", func() {
-	// })
-
 	optContainer := container.NewAdaptiveGrid(2, filterButton, settingsButton)
 
 	controls := container.NewBorder(nil, nil, nil, optContainer, form)
 	mainContainer := container.NewBorder(controls, nil, nil, nil, container.NewPadded(split))
 
 	appLogger.Printf("Page: %d, ImageNumber: %d", page, appOptions.ImageNumber)
+
+	appLogger.Println("ExcludedDirs: ", appOptions.ExcludedDirs)
 
 	if appOptions.FirstBoot {
 		appLogger.Println("This is first boot")
@@ -326,7 +326,6 @@ func main() {
 		}
 		displayImages := createDisplayImagesFunctionFromDb(db, w, sidebar, sidebarScroll, split, a, content, dbImages)
 		displayImages("")
-		appLogger.Println("Display images outside scroll listener called")
 	}
 
 	// Add event listener to scroll
@@ -346,7 +345,6 @@ func main() {
 			displayImages("")
 			content.Refresh()
 		}
-		// applogger.println(scroll.offset.y)
 	}
 
 	w.SetContent(mainContainer)

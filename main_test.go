@@ -16,7 +16,7 @@ var (
 	t         *testing.T
 	testApp   = test.NewApp()
 	window    = setupMainWindowTest(testApp)
-	blackList = map[string]int{"go": 1, "Games": 1, "games": 1}
+	blackList = map[string]int{"go": 1, "Games": 1, "games": 1, "/home/amaterasu/Audio": 1}
 )
 
 func setupMainWindowTest(a fyne.App) fyne.Window {
@@ -98,6 +98,11 @@ func TestDirectoryExclusionBlacklistCreation(t *testing.T) {
 func TestDirectoryExclusionBlacklist(t *testing.T) {
 	// Check the window title
 	assert.True(t, isExcludedDir("/home/amaterasu/go", blackList), "Blacklisted Directory is not excluded")
+}
+
+func TestFullFilepathExclusion(t *testing.T) {
+	// Check the window title
+	assert.True(t, isExcludedDir("/home/amaterasu/Audio", blackList), "Full Filepath is not excluded")
 }
 
 func isExcludedDir(dir string, blackList map[string]int) bool {

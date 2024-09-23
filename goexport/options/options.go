@@ -22,6 +22,7 @@ type Options struct {
 	FirstBoot     bool
 }
 
+// Checks if the directory is blacklisted
 func IsExcludedDir(dir string, blackList map[string]int) bool {
 	// checks if the directory is blacklisted
 	for key := range blackList {

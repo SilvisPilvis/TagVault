@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"image/color"
 	"io"
+	"log"
 	"main/goexport/apptheme"
 	"main/goexport/colorutils"
 	"main/goexport/options"
@@ -251,25 +252,50 @@ func ShowSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *option
 	settingsWindow.Show()
 }
 
-func ShowChooseDirWindow(a fyne.App, finalUrl string) {
-	chooseDirWindow := a.NewWindow("Choose a directory where your pictures are stored")
-	content := container.NewVBox(
-		widget.NewLabel("Choose a directory where your pictures are stored"),
-	)
+func ShowChooseDirWindow(a fyne.App, opts *options.Options, logger *log.Logger, db *sql.DB) {
+	chooseDirWindow := a.NewWindow("Choose directories you want to exclude from scanning")
 
-	dialog.ShowFolderOpen(func(uri fyne.ListableURI, err error) {
-		if err == nil {
-			if uri.Scheme() == "file" {
-				finalUrl = uri.Path()
-				chooseDirWindow.Close()
-			} else {
-				finalUrl = uri.String()
-				chooseDirWindow.Close()
-			}
+	var selectedDirs []string
+
+	content := container.NewVBox()
+
+	updateContent := func() {
+		content.Objects = nil
+		for _, dir := range selectedDirs {
+			label := widget.NewLabel(dir)
+			content.Add(label)
 		}
-	}, chooseDirWindow)
+		content.Refresh()
+	}
 
-	chooseDirWindow.SetContent(content)
+	scroll := container.NewScroll(content)
+
+	chooseButton := widget.NewButton("Choose Directory", func() {
+		dialog.ShowFolderOpen(func(uri fyne.ListableURI, err error) {
+			if err == nil {
+				path := uri.Path()
+				if uri.Scheme() == "file" {
+					opts.ExcludedDirs[path] = 1
+					selectedDirs = append(selectedDirs, path)
+					logger.Println("Added", path, "to excluded directories.")
+				} else {
+					opts.ExcludedDirs[uri.String()] = 1
+					selectedDirs = append(selectedDirs, uri.String())
+				}
+				updateContent()
+			}
+		}, chooseDirWindow)
+	})
+
+	doneButton := widget.NewButton("Done", func() {
+		err := options.SaveOptionsToDB(db, opts)
+		if err != nil {
+			logger.Println("Failed to save Options: ", err)
+		}
+		chooseDirWindow.Close()
+	})
+
+	chooseDirWindow.SetContent(container.NewBorder(chooseButton, doneButton, nil, nil, scroll))
 	chooseDirWindow.Resize(fyne.NewSize(515, 380))
 	chooseDirWindow.Show()
 }
@@ -420,12 +446,6 @@ func addFileToArchive(filePath string, tarWriter *tar.Writer) error {
 		return fmt.Errorf("failed to get file info for %s: %w", filePath, err)
 	}
 
-	// header, err := tar.FileInfoHeader(info, filePath)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to create tar header for %s: %w", filePath, err)
-	// }
-	// header.Name = filePath // Use full path as name
-	// header, err := tar.FileInfoHeader(info, info.Name())
 	header, err := tar.FileInfoHeader(info, info.Name())
 	if err != nil {
 		return fmt.Errorf("failed to create tar header for %s: %w", filePath, err)
@@ -437,7 +457,7 @@ func addFileToArchive(filePath string, tarWriter *tar.Writer) error {
 		return fmt.Errorf("failed to write tar header for %s: %w", filePath, err)
 	}
 
-	_, err = io.Copy(tarWriter, file)
+	_, err = io.Copy(tarWriter, file) // you can replace _ with bytes and uncoment the print below to see info
 	if err != nil {
 		return fmt.Errorf("failed to write file content for %s: %w", filePath, err)
 	}
@@ -445,75 +465,3 @@ func addFileToArchive(filePath string, tarWriter *tar.Writer) error {
 	// fmt.Printf("Added %s to archive (size: %d bytes)\n", filePath, bytesWritten)
 	return nil
 }
-
-// func ShowRightClickMenu(w fyne.Window, fileList []string) {
-// 	// Create the menu
-// 	home, _ := os.UserHomeDir()
-// 	now := time.Now()
-// 	formattedDate := now.Format("02-01-2006")
-// 	// fmt.Println(formattedDate)
-
-// 	archiveButton := widget.NewButton("Add to Archive", func() {
-// 		archive, err := os.Create(home + "/Desktop/" + formattedDate + ".tar.bz2")
-// 		if err != nil {
-// 			dialog.ShowError(err, w)
-// 		}
-// 		defer archive.Close()
-
-// 		bz2Writer, err := bzip2.NewWriter(archive, &bzip2.WriterConfig{
-// 			Level: bzip2.BestCompression,
-// 		})
-// 		if err != nil {
-// 			dialog.ShowError(err, w)
-// 		}
-// 		defer bz2Writer.Close()
-
-// 		tarWriter := tar.NewWriter(bz2Writer)
-// 		defer tarWriter.Close()
-
-// 		for _, filePath := range fileList {
-// 			err := AddFileToArchive(filePath, tarWriter)
-// 			if err != nil {
-// 				dialog.ShowError(err, w)
-// 			}
-// 		}
-// 	})
-
-// 	content := container.NewVBox(archiveButton)
-
-// 	// Show the menu
-// 	dialog.ShowCustom("Right Click", "Close", content, w)
-// }
-
-// func AddFileToArchive(filePath string, tarWriter *tar.Writer) error {
-// 	file, err := os.Open(filePath)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer file.Close()
-
-// 	fileStat, err := file.Stat()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer file.Close()
-
-// 	header := &tar.Header{
-// 		Name:    filePath,
-// 		Mode:    int64(fileStat.Mode()),
-// 		ModTime: fileStat.ModTime(),
-// 		Size:    fileStat.Size(),
-// 	}
-
-// 	err = tarWriter.WriteHeader(header)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	_, err = io.Copy(tarWriter, file)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	return nil
-// }
