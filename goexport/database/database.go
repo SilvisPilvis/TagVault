@@ -208,23 +208,21 @@ func DiscoverImages(db *sql.DB, blacklist map[string]int) (bool, error) {
 				return fmt.Errorf("error walking path %s: %w", path, err)
 			}
 			if info.IsDir() && options.IsExcludedDir(path, blacklist) {
-				var isExcluded string
+				var isExcluded int
 
-				stmt, err := db.Prepare(`SELECT 1 FROM File WHERE path like ? LIMIT 1;`)
-				if err != nil {
-					return fmt.Errorf("error preparing SQL statement: %w", err)
-				}
+				likePath := `"%` + path + `%"`
 
-				err = stmt.QueryRow(`"%"` + path + `%"`).Scan(&isExcluded)
+				err := db.QueryRow(`SELECT 1 FROM File WHERE path like ` + likePath + `;`).Scan(&isExcluded)
 				if err != nil {
 					if err == sql.ErrNoRows {
-						appLogger.Printf("No rows found for path: %s", path)
+						appLogger.Println("Not in db.")
 					}
-					appLogger.Printf("Error querying database: %v", err)
 				}
-
 				appLogger.Println("Is in db: ", isExcluded)
-				// db.Exec("DELETE FROM File WHERE path like ?", pathLike)
+
+				if isExcluded == 1 {
+					db.Exec(`DELETE FROM File WHERE path like ` + likePath + `;`)
+				}
 
 				// appLogger.Println("Skipping hidden/blacklisted directory: ", info.Name())
 				appLogger.Println("Skipping hidden/blacklisted directory: ", replaceHomeDir(path))
