@@ -7,9 +7,9 @@ import (
 )
 
 var (
-	imageTypes = map[string]struct{}{
-		".jpg": {}, ".png": {}, ".jpeg": {}, ".gif": {}, ".bmp": {}, ".ico": {},
-	}
+	// imageTypes = map[string]struct{}{
+	// 	".jpg": {}, ".png": {}, ".jpeg": {}, ".gif": {}, ".bmp": {}, ".ico": {},
+	// }
 	imageMap = map[string]bool{
 		".png":  true,
 		".jpg":  true,
@@ -18,13 +18,13 @@ var (
 		".gif":  true,
 		".tiff": true,
 		".webp": true,
-		".svg":  true,
+		".svg":  false,
+		".ico":  false,
 		".raw":  true,
 		".heic": true,
 		".avif": true,
 		".avi":  true,
 		".qoi":  true,
-		".ico":  true,
 	}
 )
 
