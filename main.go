@@ -33,21 +33,67 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
+// type imageButton struct {
+// 	widget.BaseWidget
+// 	image        *canvas.Image
+// 	onTapped     func()
+// 	onLongTap    func()
+// 	onRightClick func()
+// }
+
+// func newImageButton(resource fyne.Resource, tapped func(), longTap func(), rightClick func()) *imageButton {
+// 	img := &imageButton{
+// 		onTapped:     tapped,
+// 		onLongTap:    longTap,
+// 		onRightClick: rightClick,
+// 	}
+// 	img.ExtendBaseWidget(img)
+// 	img.image = canvas.NewImageFromResource(resource)
+// 	img.image.FillMode = canvas.ImageFillContain
+// 	img.image.SetMinSize(fyne.NewSize(150, 150))
+// 	return img
+// }
+
+// func (b *imageButton) Tapped(_ *fyne.PointEvent) {
+// 	if b.onTapped != nil {
+// 		b.onTapped()
+// 	}
+// }
+
+// func (b *imageButton) TappedSecondary(_ *fyne.PointEvent) {
+// 	if b.onRightClick != nil {
+// 		b.onRightClick()
+// 	}
+// }
+
+// func (b *imageButton) LongTap(_ *fyne.PointEvent) {
+// 	if b.onLongTap != nil {
+// 		b.onLongTap()
+// 	}
+// }
+
+// func (b *imageButton) CreateRenderer() fyne.WidgetRenderer {
+// 	return widget.NewSimpleRenderer(b.image)
+// }
+
 type imageButton struct {
 	widget.BaseWidget
-	image       *canvas.Image
-	onTapped    func()
-	onLongPress func()
-	pressedTime time.Time
-	selected    bool
+	image        *canvas.Image
+	onTapped     func()
+	onLongTap    func()
+	onRightClick func()
+	pressedTime  time.Time
+	longTapTimer *time.Timer
+	selected     bool
 }
 
-func newImageButton(resource fyne.Resource, tapped func(), pressed func()) *imageButton {
-	img := &imageButton{onTapped: tapped, onLongPress: pressed}
+func newImageButton(resource fyne.Resource) *imageButton {
+	img := &imageButton{}
 	img.ExtendBaseWidget(img)
 	img.image = canvas.NewImageFromResource(resource)
 	img.image.FillMode = canvas.ImageFillContain
@@ -55,58 +101,67 @@ func newImageButton(resource fyne.Resource, tapped func(), pressed func()) *imag
 	return img
 }
 
-// func newImageButton(resource fyne.Resource, tapped func(), pressed func()) *imageButton {
-// 	button := &imageButton{
-// 		image:       image,
-// 		onTapped:    tapped,
-// 		onLongPress: longPress,
-// 	}
-// 	button.ExtendBaseWidget(button)
-// 	return button
-// }
+func (b *imageButton) SetOnTapped(f func()) {
+	b.onTapped = f
+}
 
-func (b *imageButton) Tapped(*fyne.PointEvent) {
+func (b *imageButton) SetOnLongTap(f func()) {
+	b.onLongTap = f
+}
+
+func (b *imageButton) SetOnRightClick(f func()) {
+	b.onRightClick = f
+}
+
+func (b *imageButton) Tapped(_ *fyne.PointEvent) {
 	if b.onTapped != nil {
 		b.onTapped()
 	}
 }
 
-func (b *imageButton) LongTapped(_ *fyne.PointEvent) {
-	b.handleLongPress()
-}
-
-func (b *imageButton) MouseDown(_ *fyne.PointEvent) {
-	b.pressedTime = time.Now()
-}
-
-func (b *imageButton) MouseUp(_ *fyne.PointEvent) {
-	if time.Since(b.pressedTime) >= 500*time.Millisecond {
-		b.handleLongPress()
-	} else {
-		b.Tapped(nil)
+func (b *imageButton) TappedSecondary(_ *fyne.PointEvent) {
+	if b.onRightClick != nil {
+		b.onRightClick()
 	}
 }
 
-func (b *imageButton) handleLongPress() {
-	if b.onLongPress != nil {
-		fmt.Print("Long Pressed\n")
+func (b *imageButton) Refresh() {
+	if b.selected {
+		b.image.Translucency = 0.5
+	} else {
+		b.image.Translucency = 0
+	}
+	canvas.Refresh(b.image)
+}
+
+func (b *imageButton) LongTap(_ *fyne.PointEvent) {
+	if b.onLongTap != nil {
+		b.onLongTap()
 		b.selected = !b.selected
-		b.onLongPress()
 		b.Refresh()
+	}
+}
+
+func (b *imageButton) MouseDown(_ *desktop.MouseEvent) {
+	b.pressedTime = time.Now()
+	b.longTapTimer = time.AfterFunc(time.Millisecond*500, func() {
+		if b.onLongTap != nil {
+			b.onLongTap()
+		}
+	})
+}
+
+func (b *imageButton) MouseUp(_ *desktop.MouseEvent) {
+	if b.longTapTimer != nil {
+		b.longTapTimer.Stop()
+	}
+	if time.Since(b.pressedTime) < time.Millisecond*500 {
+		b.Tapped(nil)
 	}
 }
 
 func (b *imageButton) CreateRenderer() fyne.WidgetRenderer {
 	return widget.NewSimpleRenderer(b.image)
-}
-
-func (r *imageButton) Refresh() {
-	if r.selected {
-		r.image.Translucency = 0.5
-	} else {
-		r.image.Translucency = 0
-	}
-	canvas.Refresh(r.image)
 }
 
 var (
@@ -115,6 +170,7 @@ var (
 	optionsExist  = false
 	appLogger     = logger.InitLogger()
 	page          = 0
+	selectedFiles = []string{}
 )
 
 func main() {
@@ -425,8 +481,8 @@ func createDisplayImagesFunctionFromDb(db *sql.DB, w fyne.Window, sidebar *fyne.
 func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.Container, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App) {
 	// create a placeholder image
 	placeholderResource := fyne.NewStaticResource("placeholder", []byte{})
-	imgButton := newImageButton(placeholderResource, nil, nil)
-	// imgButton := imgbtn.NewImageButton(placeholderResource, nil)
+	// imgButton := newImageButton(placeholderResource, nil, nil, nil)
+	imgButton := newImageButton(placeholderResource)
 
 	resourceChan := make(chan fyne.Resource, 1)
 
@@ -452,8 +508,25 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 		// updates the sidebar
 		updateSidebar(db, w, path, resource, sidebar, sidebarScroll, split, a, imageContainer)
 	}
-	imgButton.onLongPress = func() {
-		appLogger.Println("Long press on image: ", path)
+
+	imgButtonPtr := *&imgButton
+
+	// imgButtonPtr.onLongTap = func() {
+	// 	selectedFiles = append(selectedFiles, path)
+	// 	appLogger.Println("Added new file: ", path)
+	// 	appLogger.Println("Selected files: ", selectedFiles)
+	// }
+	imgButtonPtr.SetOnLongTap(func() {
+		selectedFiles = append(selectedFiles, path)
+		appLogger.Println("Added new file: ", path)
+		appLogger.Println("Selected files: ", selectedFiles)
+	})
+
+	imgButton.onRightClick = func() {
+		appLogger.Println("Add functionality to open menu to add to archive and compress")
+		// selectedFiles = append(selectedFiles, path)
+		// appLogger.Println("Added new file: ", path)
+		// appLogger.Println("Selected files: ", selectedFiles)
 	}
 
 	// make a parent container to hold the image button and label
