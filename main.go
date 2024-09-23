@@ -509,21 +509,22 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 		updateSidebar(db, w, path, resource, sidebar, sidebarScroll, split, a, imageContainer)
 	}
 
-	imgButtonPtr := *&imgButton
-
-	// imgButtonPtr.onLongTap = func() {
-	// 	selectedFiles = append(selectedFiles, path)
-	// 	appLogger.Println("Added new file: ", path)
-	// 	appLogger.Println("Selected files: ", selectedFiles)
-	// }
-	imgButtonPtr.SetOnLongTap(func() {
+	imgButton.onLongTap = func() {
 		selectedFiles = append(selectedFiles, path)
 		appLogger.Println("Added new file: ", path)
 		appLogger.Println("Selected files: ", selectedFiles)
-	})
+	}
+	// imgButtonPtr := *&imgButton
+	// imgButtonPtr.SetOnLongTap(func() {
+	// 	selectedFiles = append(selectedFiles, path)
+	// 	appLogger.Println("Added new file: ", path)
+	// 	appLogger.Println("Selected files: ", selectedFiles)
+	// })
 
 	imgButton.onRightClick = func() {
 		appLogger.Println("Add functionality to open menu to add to archive and compress")
+		utilwindows.ShowRightClickMenu(w, selectedFiles)
+		// os.Exit(0)
 		// selectedFiles = append(selectedFiles, path)
 		// appLogger.Println("Added new file: ", path)
 		// appLogger.Println("Selected files: ", selectedFiles)

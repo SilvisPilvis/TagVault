@@ -1,19 +1,27 @@
 package utilwindows
 
 import (
+	"archive/tar"
 	"database/sql"
 	"image/color"
+	"io"
 	"main/goexport/apptheme"
 	"main/goexport/colorutils"
 	"main/goexport/options"
+	"os"
 	"strconv"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
+
+	"github.com/dsnet/compress/bzip2"
 )
+
+const LAYOUT = "02-01-2006"
 
 func ShowThemeEditorWindow(app fyne.App, currentTheme fyne.Theme, w fyne.Window, opts *options.Options) {
 	window := app.NewWindow("Theme Editor")
@@ -261,4 +269,76 @@ func ShowChooseDirWindow(a fyne.App, finalUrl string) {
 	chooseDirWindow.SetContent(content)
 	chooseDirWindow.Resize(fyne.NewSize(515, 380))
 	chooseDirWindow.Show()
+}
+
+func ShowRightClickMenu(w fyne.Window, fileList []string) {
+	// Create the menu
+	home, _ := os.UserHomeDir()
+	now := time.Now()
+	formattedDate := now.Format("02-01-2006")
+	// fmt.Println(formattedDate)
+
+	archiveButton := widget.NewButton("Add to Archive", func() {
+		archive, err := os.Create(home + "/Desktop/" + formattedDate + ".tar.bz2")
+		if err != nil {
+			dialog.ShowError(err, w)
+		}
+		defer archive.Close()
+
+		bz2Writer, err := bzip2.NewWriter(archive, &bzip2.WriterConfig{
+			Level: bzip2.BestCompression,
+		})
+		if err != nil {
+			dialog.ShowError(err, w)
+		}
+		defer bz2Writer.Close()
+
+		tarWriter := tar.NewWriter(bz2Writer)
+		defer tarWriter.Close()
+
+		for _, filePath := range fileList {
+			err := AddFileToArchive(filePath, tarWriter)
+			if err != nil {
+				dialog.ShowError(err, w)
+			}
+		}
+	})
+
+	content := container.NewVBox(archiveButton)
+
+	// Show the menu
+	dialog.ShowCustom("Right Click", "Close", content, w)
+}
+
+func AddFileToArchive(filePath string, tarWriter *tar.Writer) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	fileStat, err := file.Stat()
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	header := &tar.Header{
+		Name:    filePath,
+		Mode:    int64(fileStat.Mode()),
+		ModTime: fileStat.ModTime(),
+		Size:    fileStat.Size(),
+	}
+
+	err = tarWriter.WriteHeader(header)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(tarWriter, file)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
