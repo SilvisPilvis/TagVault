@@ -218,7 +218,7 @@ func DiscoverImages(db *sql.DB, blacklist map[string]int) (bool, error) {
 						appLogger.Println("Not in db.")
 					}
 				}
-				appLogger.Println("Is in db: ", isExcluded)
+				// appLogger.Println("Is in db: ", isExcluded)
 
 				if isExcluded == 1 {
 					db.Exec(`DELETE FROM File WHERE path like ` + likePath + `;`)

@@ -113,15 +113,6 @@ func (b *imageButton) TappedSecondary(_ *fyne.PointEvent) {
 	}
 }
 
-func (b *imageButton) Refresh() {
-	if b.selected {
-		b.image.Translucency = 1
-	} else {
-		b.image.Translucency = 0
-	}
-	canvas.Refresh(b.image)
-}
-
 func (b *imageButton) LongTap(me *desktop.MouseEvent) {
 	if me.Button == desktop.MouseButtonPrimary {
 		if b.onLongTap != nil {
@@ -132,10 +123,19 @@ func (b *imageButton) LongTap(me *desktop.MouseEvent) {
 	}
 }
 
+func (b *imageButton) Refresh() {
+	if b.selected {
+		b.image.Translucency = 0.7
+	} else {
+		b.image.Translucency = 0
+	}
+	canvas.Refresh(b.image)
+}
+
 func (b *imageButton) MouseDown(me *desktop.MouseEvent) {
 	if me.Button == desktop.MouseButtonPrimary {
 		b.pressedTime = time.Now()
-		b.longTapTimer = time.AfterFunc(time.Millisecond*500, func() {
+		b.longTapTimer = time.AfterFunc(time.Millisecond*200, func() {
 			if b.onLongTap != nil {
 				b.onLongTap()
 			}
@@ -147,7 +147,7 @@ func (b *imageButton) MouseUp(_ *desktop.MouseEvent) {
 	if b.longTapTimer != nil {
 		b.longTapTimer.Stop()
 	}
-	if time.Since(b.pressedTime) < time.Millisecond*500 {
+	if time.Since(b.pressedTime) < time.Millisecond*200 {
 		b.Tapped(nil)
 	}
 }
@@ -489,6 +489,8 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 
 		// set the image button image to the resource
 		imgButton.image.Resource = resource
+		imgButton.image.Translucency = 0
+		// imgButton.image.Refresh()
 		canvas.Refresh(imgButton)
 		resourceChan <- resource
 	}()
@@ -503,6 +505,8 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 		selectedFiles = append(selectedFiles, path)
 		appLogger.Println("Added new file: ", path)
 		appLogger.Println("Selected files: ", selectedFiles)
+		imgButton.image.Translucency = 0.7
+		canvas.Refresh(imgButton)
 	}
 	// imgButtonPtr := *&imgButton
 	// imgButtonPtr.SetOnLongTap(func() {
