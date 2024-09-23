@@ -101,19 +101,7 @@ func newImageButton(resource fyne.Resource) *imageButton {
 	return img
 }
 
-func (b *imageButton) SetOnTapped(f func()) {
-	b.onTapped = f
-}
-
-func (b *imageButton) SetOnLongTap(f func()) {
-	b.onLongTap = f
-}
-
-func (b *imageButton) SetOnRightClick(f func()) {
-	b.onRightClick = f
-}
-
-func (b *imageButton) Tapped(_ *fyne.PointEvent) {
+func (b *imageButton) Tapped(me *desktop.MouseEvent) {
 	if b.onTapped != nil {
 		b.onTapped()
 	}
@@ -127,28 +115,32 @@ func (b *imageButton) TappedSecondary(_ *fyne.PointEvent) {
 
 func (b *imageButton) Refresh() {
 	if b.selected {
-		b.image.Translucency = 0.5
+		b.image.Translucency = 1
 	} else {
 		b.image.Translucency = 0
 	}
 	canvas.Refresh(b.image)
 }
 
-func (b *imageButton) LongTap(_ *fyne.PointEvent) {
-	if b.onLongTap != nil {
-		b.onLongTap()
-		b.selected = !b.selected
-		b.Refresh()
+func (b *imageButton) LongTap(me *desktop.MouseEvent) {
+	if me.Button == desktop.MouseButtonPrimary {
+		if b.onLongTap != nil {
+			b.onLongTap()
+			b.selected = !b.selected
+			b.Refresh()
+		}
 	}
 }
 
-func (b *imageButton) MouseDown(_ *desktop.MouseEvent) {
-	b.pressedTime = time.Now()
-	b.longTapTimer = time.AfterFunc(time.Millisecond*500, func() {
-		if b.onLongTap != nil {
-			b.onLongTap()
-		}
-	})
+func (b *imageButton) MouseDown(me *desktop.MouseEvent) {
+	if me.Button == desktop.MouseButtonPrimary {
+		b.pressedTime = time.Now()
+		b.longTapTimer = time.AfterFunc(time.Millisecond*500, func() {
+			if b.onLongTap != nil {
+				b.onLongTap()
+			}
+		})
+	}
 }
 
 func (b *imageButton) MouseUp(_ *desktop.MouseEvent) {
@@ -524,10 +516,6 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 	imgButton.onRightClick = func() {
 		appLogger.Println("Add functionality to open menu to add to archive and compress")
 		utilwindows.ShowRightClickMenu(w, selectedFiles)
-		// os.Exit(0)
-		// selectedFiles = append(selectedFiles, path)
-		// appLogger.Println("Added new file: ", path)
-		// appLogger.Println("Selected files: ", selectedFiles)
 	}
 
 	// make a parent container to hold the image button and label

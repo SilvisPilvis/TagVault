@@ -279,7 +279,7 @@ func ShowRightClickMenu(w fyne.Window, fileList []string) {
 	now := time.Now()
 	formattedDate := now.Format("02-01-2006")
 
-	gzipButton := widget.NewButton("Add to Gzip Archive", func() {
+	gzipButton := widget.NewButton("Create Gzip Archive", func() {
 		archivePath := filepath.Join(home, "Desktop", formattedDate+".tar.gz")
 		err := createTarGzipArchive(archivePath, fileList)
 		if err != nil {
@@ -289,7 +289,7 @@ func ShowRightClickMenu(w fyne.Window, fileList []string) {
 		}
 	})
 
-	bzip2Button := widget.NewButton("Add to Bzip2 Archive", func() {
+	bzip2Button := widget.NewButton("Create Bzip2 Archive", func() {
 		archivePath := filepath.Join(home, "Desktop", formattedDate+".tar.bz2")
 		err := createTarBzip2Archive(archivePath, fileList)
 		if err != nil {
@@ -303,7 +303,7 @@ func ShowRightClickMenu(w fyne.Window, fileList []string) {
 		gzipButton,
 		bzip2Button,
 	)
-	dialog.ShowCustom("Right Click", "Close", content, w)
+	dialog.ShowCustom("File Actions", "Close", content, w)
 }
 
 func createTarBzip2Archive(archivePath string, fileList []string) error {
