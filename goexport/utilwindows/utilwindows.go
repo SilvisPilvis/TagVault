@@ -2,9 +2,14 @@ package utilwindows
 
 import (
 	"archive/tar"
-
+	"archive/zip"
 	"compress/gzip"
+
+	// "crypto/aes"
+	// "crypto/cipher"
+	// "crypto/rand"
 	"database/sql"
+	"errors"
 	"fmt"
 	"image/color"
 	"io"
@@ -26,6 +31,8 @@ import (
 )
 
 const LAYOUT = "02-01-2006"
+
+var archivePassword string
 
 func ShowThemeEditorWindow(app fyne.App, currentTheme fyne.Theme, w fyne.Window, opts *options.Options) {
 	window := app.NewWindow("Theme Editor")
@@ -300,14 +307,14 @@ func ShowChooseDirWindow(a fyne.App, opts *options.Options, logger *log.Logger, 
 	chooseDirWindow.Show()
 }
 
-func ShowRightClickMenu(w fyne.Window, fileList []string) {
+func ShowRightClickMenu(w fyne.Window, fileList []string, a fyne.App) {
 	home, _ := os.UserHomeDir()
 	now := time.Now()
 	formattedDate := now.Format("02-01-2006")
 
 	gzipButton := widget.NewButton("Create Gzip Archive", func() {
 		archivePath := filepath.Join(home, "Desktop", formattedDate+".tar.gz")
-		err := createTarGzipArchive(archivePath, fileList)
+		err := createTarGzipArchive(archivePath, fileList, w)
 		if err != nil {
 			dialog.ShowError(err, w)
 		} else {
@@ -317,7 +324,7 @@ func ShowRightClickMenu(w fyne.Window, fileList []string) {
 
 	bzip2Button := widget.NewButton("Create Bzip2 Archive", func() {
 		archivePath := filepath.Join(home, "Desktop", formattedDate+".tar.bz2")
-		err := createTarBzip2Archive(archivePath, fileList)
+		err := createTarBzip2Archive(archivePath, fileList, w)
 		if err != nil {
 			dialog.ShowError(err, w)
 		} else {
@@ -325,22 +332,53 @@ func ShowRightClickMenu(w fyne.Window, fileList []string) {
 		}
 	})
 
+	zipButton := widget.NewButton("Create Zip Archive", func() {
+		archivePath := filepath.Join(home, "Desktop", formattedDate+".zip")
+		err := createZipArchive(archivePath, fileList, w)
+		if err != nil {
+			dialog.ShowError(err, w)
+		} else {
+			dialog.ShowInformation("Success", fmt.Sprintf("Archive created successfully at %s", archivePath), w)
+		}
+	})
+
+	encryptedButton := widget.NewButton("Create Encrypted Archive", func() {
+		showPasswordWindow(a)
+	})
+
 	content := container.NewVBox(
 		gzipButton,
 		bzip2Button,
+		zipButton,
+		encryptedButton,
 	)
 	dialog.ShowCustom("File Actions", "Close", content, w)
 }
 
-func createTarBzip2Archive(archivePath string, fileList []string) error {
+func showPasswordWindow(a fyne.App) {
+	passwordWindow := a.NewWindow("Enter Password")
+	label := widget.NewLabel("Enter Password:")
+	password := widget.NewEntry()
+	password.OnSubmitted = func(password string) {
+		archivePassword = password
+		passwordWindow.Close()
+	}
+	container := container.NewVBox(label, password)
+	passwordWindow.SetContent(container)
+	passwordWindow.Resize(fyne.NewSize(300, 100))
+	passwordWindow.Show()
+}
+
+func createTarBzip2Archive(archivePath string, fileList []string, w fyne.Window) error {
+	if len(fileList) <= 1 {
+		dialog.ShowError(errors.New("no files to archive"), w)
+	}
+
 	archive, err := os.Create(archivePath)
 	if err != nil {
 		return fmt.Errorf("failed to create archive: %w", err)
 	}
 	defer archive.Close()
-
-	// gzipWriter := gzip.NewWriter(archive)
-	// defer gzipWriter.Close() // Ensure gzipWriter is closed to finalize the archive
 
 	bzipWriter, err := bzip2.NewWriter(archive, &bzip2.WriterConfig{
 		Level: bzip2.BestCompression,
@@ -350,12 +388,11 @@ func createTarBzip2Archive(archivePath string, fileList []string) error {
 	}
 	defer bzipWriter.Close() // Ensure bzipWriter is closed
 
-	// tarWriter := tar.NewWriter(gzipWriter)
 	tarWriter := tar.NewWriter(bzipWriter)
 	defer tarWriter.Close() // Ensure tarWriter is closed
 
 	for _, filePath := range fileList {
-		err := addFileToArchive(filePath, tarWriter)
+		err := addFileToTarArchive(filePath, tarWriter)
 		if err != nil {
 			return fmt.Errorf("failed to add file %s to archive: %w", filePath, err)
 		}
@@ -367,9 +404,6 @@ func createTarBzip2Archive(archivePath string, fileList []string) error {
 	}
 
 	// Ensure gzipWriter/bzip2Writer is closed properly
-	// if err := gzipWriter.Close(); err != nil {
-	// 	return fmt.Errorf("failed to close gzip writer: %w", err)
-	// }
 	if err := bzipWriter.Close(); err != nil {
 		return fmt.Errorf("failed to close gzip writer: %w", err)
 	}
@@ -389,7 +423,11 @@ func createTarBzip2Archive(archivePath string, fileList []string) error {
 	return nil
 }
 
-func createTarGzipArchive(archivePath string, fileList []string) error {
+func createTarGzipArchive(archivePath string, fileList []string, w fyne.Window) error {
+	if len(fileList) <= 1 {
+		dialog.ShowError(errors.New("no files to archive"), w)
+	}
+
 	archive, err := os.Create(archivePath)
 	if err != nil {
 		return fmt.Errorf("failed to create archive: %w", err)
@@ -403,7 +441,7 @@ func createTarGzipArchive(archivePath string, fileList []string) error {
 	defer tarWriter.Close() // Ensure tarWriter is closed
 
 	for _, filePath := range fileList {
-		err := addFileToArchive(filePath, tarWriter)
+		err := addFileToTarArchive(filePath, tarWriter)
 		if err != nil {
 			return fmt.Errorf("failed to add file %s to archive: %w", filePath, err)
 		}
@@ -434,7 +472,210 @@ func createTarGzipArchive(archivePath string, fileList []string) error {
 	return nil
 }
 
-func addFileToArchive(filePath string, tarWriter *tar.Writer) error {
+func createZipArchive(archivePath string, fileList []string, w fyne.Window) error {
+	// if len(fileList) <= 1 {
+	// 	dialog.ShowError(errors.New("no files to archive"), w)
+	// }
+
+	archive, err := os.Create(archivePath)
+	if err != nil {
+		return fmt.Errorf("failed to create archive: %w", err)
+	}
+	defer archive.Close()
+
+	zipWriter := zip.NewWriter(archive)
+	defer zipWriter.Close() // Ensure gzipWriter is closed to finalize the archive
+
+	for _, filePath := range fileList {
+		err := addFileZipToArchive(filePath, zipWriter)
+		if err != nil {
+			return fmt.Errorf("failed to add file %s to archive: %w", filePath, err)
+		}
+	}
+
+	// Ensure zipWriter is closed properly
+	if err := zipWriter.Close(); err != nil {
+		return fmt.Errorf("failed to close gzip writer: %w", err)
+	}
+
+	// Ensure archive is closed properly
+	if err := archive.Close(); err != nil {
+		return fmt.Errorf("failed to close archive: %w", err)
+	}
+
+	// Verify the archive is not empty
+	info, err := os.Stat(archivePath)
+	if err != nil {
+		return fmt.Errorf("failed to stat archive file: %w", err)
+	}
+
+	fmt.Printf("Archive created successfully at %s with size %d bytes\n", archivePath, info.Size())
+	return nil
+}
+
+// func encrypt(plaintext string, fileContent []byte) string {
+// 	aes, err := aes.NewCipher(fileContent)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+
+// 	gcm, err := cipher.NewGCM(aes)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+
+// 	// We need a 12-byte nonce for GCM (modifiable if you use cipher.NewGCMWithNonceSize())
+// 	// A nonce should always be randomly generated for every encryption.
+// 	nonce := make([]byte, gcm.NonceSize())
+// 	_, err = rand.Read(nonce)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+
+// 	// ciphertext here is actually nonce+ciphertext
+// 	// So that when we decrypt, just knowing the nonce size
+// 	// is enough to separate it from the ciphertext.
+// 	ciphertext := gcm.Seal(nonce, nonce, []byte(plaintext), nil)
+
+// 	return string(ciphertext)
+// }
+
+// func decrypt(ciphertext string, filePath string) string {
+// 	aes, err := aes.NewCipher([]byte(secretKey))
+// 	if err != nil {
+// 		panic(err)
+// 	}
+
+// 	gcm, err := cipher.NewGCM(aes)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+
+// 	// Since we know the ciphertext is actually nonce+ciphertext
+// 	// And len(nonce) == NonceSize(). We can separate the two.
+// 	nonceSize := gcm.NonceSize()
+// 	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
+
+// 	plaintext, err := gcm.Open(nil, []byte(nonce), []byte(ciphertext), nil)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+
+// 	return string(plaintext)
+// }
+
+func createEncryptedTarBzip2Archive(archivePath string, fileList []string, w fyne.Window) error {
+	// if len(fileList) <= 1 {
+	// 	dialog.ShowError(errors.New("no files to archive"), w)
+	// }
+
+	archive, err := os.Create(archivePath)
+	if err != nil {
+		return fmt.Errorf("failed to create archive: %w", err)
+	}
+	defer archive.Close()
+
+	bzipWriter, err := bzip2.NewWriter(archive, &bzip2.WriterConfig{
+		Level: bzip2.BestCompression,
+	})
+	if err != nil {
+		dialog.ShowError(err, nil)
+	}
+	defer bzipWriter.Close() // Ensure bzipWriter is closed
+
+	tarWriter := tar.NewWriter(bzipWriter)
+	defer tarWriter.Close() // Ensure tarWriter is closed
+
+	for _, filePath := range fileList {
+		err := addFileToTarArchive(filePath, tarWriter)
+		if err != nil {
+			return fmt.Errorf("failed to add file %s to archive: %w", filePath, err)
+		}
+	}
+
+	// Ensure tarWriter is closed properly
+	if err := tarWriter.Close(); err != nil {
+		return fmt.Errorf("failed to close tar writer: %w", err)
+	}
+
+	// Ensure gzipWriter/bzip2Writer is closed properly
+	if err := bzipWriter.Close(); err != nil {
+		return fmt.Errorf("failed to close gzip writer: %w", err)
+	}
+
+	// Ensure archive is closed properly
+	if err := archive.Close(); err != nil {
+		return fmt.Errorf("failed to close archive: %w", err)
+	}
+
+	// Verify the archive is not empty
+	info, err := os.Stat(archivePath)
+	if err != nil {
+		return fmt.Errorf("failed to stat archive file: %w", err)
+	}
+
+	fmt.Printf("Archive created successfully at %s with size %d bytes\n", archivePath, info.Size())
+	return nil
+}
+
+func createEncryptedTarGzipArchive(archivePath string, fileList []string, w fyne.Window) error {
+	if len(fileList) <= 1 {
+		dialog.ShowError(errors.New("no files to archive"), w)
+	}
+
+	archive, err := os.Create(archivePath)
+	if err != nil {
+		return fmt.Errorf("failed to create archive: %w", err)
+	}
+	defer archive.Close()
+
+	gzipWriter := gzip.NewWriter(archive)
+	defer gzipWriter.Close() // Ensure gzipWriter is closed to finalize the archive
+
+	tarWriter := tar.NewWriter(gzipWriter)
+	defer tarWriter.Close() // Ensure tarWriter is closed
+
+	for _, filePath := range fileList {
+		err := addFileToTarArchive(filePath, tarWriter)
+		if err != nil {
+			return fmt.Errorf("failed to add file %s to archive: %w", filePath, err)
+		}
+	}
+
+	// Ensure tarWriter is closed properly
+	if err := tarWriter.Close(); err != nil {
+		return fmt.Errorf("failed to close tar writer: %w", err)
+	}
+
+	// Ensure gzipWriter/bzip2Writer is closed properly
+	if err := gzipWriter.Close(); err != nil {
+		return fmt.Errorf("failed to close gzip writer: %w", err)
+	}
+
+	// Ensure archive is closed properly
+	if err := archive.Close(); err != nil {
+		return fmt.Errorf("failed to close archive: %w", err)
+	}
+
+	// Verify the archive is not empty
+	info, err := os.Stat(archivePath)
+	if err != nil {
+		return fmt.Errorf("failed to stat archive file: %w", err)
+	}
+
+	fmt.Printf("Archive created successfully at %s with size %d bytes\n", archivePath, info.Size())
+	return nil
+}
+
+func addFileToTarArchive(filePath string, tarWriter *tar.Writer) error {
+	// switch archiveFormat {
+	// case "tar":
+
+	// case "zip":
+	// default:
+	// 	return fmt.Errorf("unknown archive format: %s", archiveFormat)
+	// }
+
 	file, err := os.Open(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to open file %s: %w", filePath, err)
@@ -458,6 +699,40 @@ func addFileToArchive(filePath string, tarWriter *tar.Writer) error {
 	}
 
 	_, err = io.Copy(tarWriter, file) // you can replace _ with bytes and uncoment the print below to see info
+	if err != nil {
+		return fmt.Errorf("failed to write file content for %s: %w", filePath, err)
+	}
+
+	// fmt.Printf("Added %s to archive (size: %d bytes)\n", filePath, bytesWritten)
+	return nil
+}
+
+func addFileZipToArchive(filePath string, zipWriter *zip.Writer) error {
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to open file %s: %w", filePath, err)
+	}
+	defer file.Close()
+
+	info, err := file.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to get file info for %s: %w", filePath, err)
+	}
+
+	header, err := zip.FileInfoHeader(info)
+	if err != nil {
+		return fmt.Errorf("failed to create tar header for %s: %w", filePath, err)
+	}
+
+	header.Name = filepath.Base(filePath)
+
+	writer, err := zipWriter.CreateHeader(header)
+	if err != nil {
+		return fmt.Errorf("failed to write zip header for %s: %w", filePath, err)
+	}
+
+	_, err = io.Copy(writer, file) // you can replace _ with bytes and uncoment the print below to see info
 	if err != nil {
 		return fmt.Errorf("failed to write file content for %s: %w", filePath, err)
 	}

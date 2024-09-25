@@ -508,16 +508,10 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 		imgButton.image.Translucency = 0.7
 		canvas.Refresh(imgButton)
 	}
-	// imgButtonPtr := *&imgButton
-	// imgButtonPtr.SetOnLongTap(func() {
-	// 	selectedFiles = append(selectedFiles, path)
-	// 	appLogger.Println("Added new file: ", path)
-	// 	appLogger.Println("Selected files: ", selectedFiles)
-	// })
 
 	imgButton.onRightClick = func() {
 		appLogger.Println("Add functionality to open menu to add to archive and compress")
-		utilwindows.ShowRightClickMenu(w, selectedFiles)
+		utilwindows.ShowRightClickMenu(w, selectedFiles, a)
 	}
 
 	// make a parent container to hold the image button and label
