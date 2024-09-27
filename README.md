@@ -42,6 +42,8 @@ Current supported image types:
 - [ ] AVIF
 - [ ] QOI
 - [ ] DNG
+
+
 - [ ] JPEGXL Someday... Maybe... Possibly...?
 
 ## App Demo Images

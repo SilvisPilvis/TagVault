@@ -173,6 +173,8 @@ func main() {
 	appLogger.Println("Check Obsidian Todo list")
 	appLogger.Println("Make displayImages work with getImagesFromDatabase")
 
+	gif, err := widget.NewG
+
 	// appLogger.Println("Downloading ffmpeg")
 	// err := ffmpeg.DownloadFFmpegLinux()
 	// if err != nil {

@@ -25,6 +25,7 @@ var (
 		".avif": true,
 		".avi":  true,
 		".qoi":  true,
+		".dng":  true,
 	}
 )
 
