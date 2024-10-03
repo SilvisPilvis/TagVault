@@ -11,21 +11,21 @@ import (
 	"image/gif"
 	"image/jpeg"
 	"image/png"
-	"main/goexport/apptheme"
-	"main/goexport/database"
-	"main/goexport/fileutils"
-	"main/goexport/logger"
-	"main/goexport/options"
-	"main/goexport/profiling"
-	"main/goexport/tagwindow"
-	"main/goexport/utilwindows"
+	"main/pkg/apptheme"
+	"main/pkg/database"
+	"main/pkg/fileutils"
+	"main/pkg/logger"
+	"main/pkg/options"
+	"main/pkg/profiling"
+	"main/pkg/tagwindow"
+	"main/pkg/utilwindows"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
 
-	// "main/goexport/fynecomponents/imgbtn"
+	// "main/pkg/fynecomponents/imgbtn"
 	"golang.org/x/image/draw"
 
 	"fyne.io/fyne/v2"
@@ -173,7 +173,7 @@ func main() {
 	appLogger.Println("Check Obsidian Todo list")
 	appLogger.Println("Make displayImages work with getImagesFromDatabase")
 
-	gif, err := widget.NewG
+	// gif, err := widget.NewG
 
 	// appLogger.Println("Downloading ffmpeg")
 	// err := ffmpeg.DownloadFFmpegLinux()

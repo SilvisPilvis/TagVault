@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"image/color"
 	"log"
-	"main/goexport/colorutils"
-	"main/goexport/database"
-	"main/goexport/options"
+	"main/pkg/colorutils"
+	"main/pkg/database"
+	"main/pkg/options"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"

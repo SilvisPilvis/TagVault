@@ -2,7 +2,7 @@ package utilwindows
 
 import (
 	"archive/tar"
-	"archive/zip"
+	// "archive/zip"
 	"compress/gzip"
 	"crypto/aes"
 	"crypto/cipher"
@@ -14,9 +14,9 @@ import (
 	"image/color"
 	"io"
 	"log"
-	"main/goexport/apptheme"
-	"main/goexport/colorutils"
-	"main/goexport/options"
+	"main/pkg/apptheme"
+	"main/pkg/colorutils"
+	"main/pkg/options"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -28,6 +28,8 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 	"github.com/dsnet/compress/bzip2"
+
+	"github.com/alexmullins/zip"
 )
 
 const LAYOUT = "02-01-2006"
@@ -767,48 +769,64 @@ func addEncryptedFileZipToArchive(filePath string, zipWriter *zip.Writer) error 
 	if err != nil {
 		return fmt.Errorf("failed to create tar header for %s: %w", filePath, err)
 	}
+	header.SetPassword(archivePassword)
 
 	header.Name = filepath.Base(filePath)
 
-	hasher := sha256.New()
-	hasher.Write([]byte(archivePassword))
-	hashedPass := sha256.Sum256([]byte(archivePassword))
-
-	block, err := aes.NewCipher(hashedPass[:])
-	if err != nil {
-		return fmt.Errorf("failed to create cipher: %w", err)
-	}
-
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return fmt.Errorf("failed to create GCM: %w", err)
-	}
-
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err = rand.Read(nonce); err != nil {
-		return fmt.Errorf("failed to generate nonce: %w", err)
-	}
-
-	fileBytes, err := io.ReadAll(file)
-	if err != nil {
-		return fmt.Errorf("failed to read file content for %s: %w", filePath, err)
-	}
-
-	cipherText := gcm.Seal(nil, nonce, fileBytes, nil)
-
-	fullEncryptedContent := append(nonce, cipherText...)
-
-	encryptedWriter, err := zipWriter.CreateHeader(header)
+	// --- Normal Zip Section Start
+	writer, err := zipWriter.CreateHeader(header)
 	if err != nil {
 		return fmt.Errorf("failed to write zip header for %s: %w", filePath, err)
 	}
 
-	_, err = encryptedWriter.Write(fullEncryptedContent)
+	_, err = io.Copy(writer, file) // you can replace _ with bytes and uncoment the print below to see info
 	if err != nil {
 		return fmt.Errorf("failed to write file content for %s: %w", filePath, err)
 	}
 
+	// fmt.Printf("Added %s to archive (size: %d bytes)\n", filePath, bytesWritten)
 	return nil
+	// --- Normal Zip Section End
+
+	// hasher := sha256.New()
+	// hasher.Write([]byte(archivePassword))
+	// hashedPass := sha256.Sum256([]byte(archivePassword))
+
+	// block, err := aes.NewCipher(hashedPass[:])
+	// if err != nil {
+	// 	return fmt.Errorf("failed to create cipher: %w", err)
+	// }
+
+	// gcm, err := cipher.NewGCM(block)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to create GCM: %w", err)
+	// }
+
+	// nonce := make([]byte, gcm.NonceSize())
+	// if _, err = rand.Read(nonce); err != nil {
+	// 	return fmt.Errorf("failed to generate nonce: %w", err)
+	// }
+
+	// fileBytes, err := io.ReadAll(file)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to read file content for %s: %w", filePath, err)
+	// }
+
+	// cipherText := gcm.Seal(nil, nonce, fileBytes, nil)
+
+	// fullEncryptedContent := append(nonce, cipherText...)
+
+	// encryptedWriter, err := zipWriter.CreateHeader(header)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to write zip header for %s: %w", filePath, err)
+	// }
+
+	// _, err = encryptedWriter.Write(fullEncryptedContent)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to write file content for %s: %w", filePath, err)
+	// }
+
+	// return nil
 }
 
 func addEncryptedFileToTarArchive(filePath string, tarWriter *tar.Writer) error {

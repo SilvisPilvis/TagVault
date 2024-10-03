@@ -10,7 +10,7 @@ import (
 	"image/png"
 	_ "image/png"
 	"log"
-	"main/goexport/fileutils"
+	"main/pkg/fileutils"
 	"os"
 )
 
