@@ -26,6 +26,7 @@ import (
 	"sync"
 
 	// "main/pkg/fynecomponents/imgbtn"
+
 	"golang.org/x/image/draw"
 
 	"fyne.io/fyne/v2"
@@ -34,8 +35,10 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/driver/desktop"
+	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	fyneGif "fyne.io/x/fyne/widget"
 )
 
 // type imageButton struct {
@@ -295,8 +298,9 @@ func main() {
 	settingsButton.Icon = theme.SettingsIcon()
 
 	loadFilterButton := fyne.NewStaticResource("filterIcon", []byte{
-		137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 96, 0, 0, 0, 96, 8, 6, 0, 0, 0, 226, 152, 119, 56, 0, 0, 2, 82, 73, 68, 65, 84, 120, 156, 236, 155, 61, 114, 219, 48, 16, 70, 1, 37, 147, 76, 142, 34, 53, 73, 159, 171, 184, 215, 169, 236, 155, 122, 232, 113, 193, 25, 22, 150, 205, 37, 119, 241, 62, 154, 223, 171, 92, 208, 32, 176, 15, 88, 252, 81, 151, 102, 80, 44, 0, 198, 2, 96, 44, 0, 198, 2, 96, 44, 0, 198, 2, 96, 44, 0, 198, 2, 96, 44, 0, 198, 2, 96, 44, 0, 198, 2, 96, 44, 0, 198, 2, 96, 44, 0, 230, 103, 70, 33, 211, 52, 77, 25, 229, 28, 141, 222, 123, 223, 91, 198, 238, 17, 112, 214, 224, 183, 164, 182, 59, 5, 193, 88, 0, 204, 46, 1, 79, 247, 251, 255, 188, 170, 156, 147, 221, 147, 200, 153, 231, 128, 150, 48, 17, 59, 5, 193, 236, 22, 144, 177, 20, 59, 42, 25, 109, 79, 11, 94, 36, 21, 169, 74, 35, 218, 144, 153, 130, 126, 175, 125, 80, 113, 222, 8, 214, 105, 117, 91, 191, 34, 181, 39, 70, 3, 171, 50, 18, 200, 122, 167, 78, 194, 209, 138, 41, 140, 4, 186, 211, 164, 175, 130, 84, 122, 117, 5, 21, 109, 43, 89, 134, 70, 42, 74, 142, 2, 133, 133, 67, 217, 62, 224, 118, 251, 247, 178, 246, 89, 66, 66, 228, 157, 145, 182, 68, 41, 77, 23, 116, 126, 125, 132, 82, 189, 74, 119, 194, 27, 38, 229, 63, 117, 181, 217, 246, 142, 234, 78, 33, 215, 227, 170, 27, 172, 84, 151, 54, 240, 44, 232, 199, 218, 7, 43, 231, 131, 96, 217, 67, 98, 51, 108, 201, 72, 231, 93, 250, 253, 143, 24, 118, 26, 74, 110, 210, 84, 131, 223, 70, 31, 71, 111, 144, 144, 113, 103, 29, 42, 99, 244, 70, 114, 248, 125, 64, 176, 129, 175, 9, 175, 92, 93, 6, 177, 139, 167, 46, 100, 134, 156, 156, 82, 39, 156, 17, 176, 115, 155, 234, 188, 172, 156, 247, 151, 96, 87, 146, 209, 6, 95, 175, 127, 159, 215, 62, 123, 148, 224, 55, 114, 4, 204, 84, 108, 140, 212, 54, 91, 159, 129, 95, 202, 103, 159, 156, 30, 41, 248, 77, 65, 64, 75, 60, 57, 85, 57, 225, 140, 128, 247, 128, 153, 189, 121, 251, 72, 121, 127, 137, 196, 8, 104, 219, 86, 57, 191, 62, 250, 187, 226, 93, 149, 200, 84, 100, 102, 75, 14, 63, 90, 222, 95, 34, 85, 153, 153, 194, 19, 209, 75, 239, 29, 255, 16, 96, 137, 76, 10, 26, 129, 90, 240, 155, 170, 128, 138, 52, 161, 150, 122, 102, 36, 5, 180, 228, 128, 169, 6, 191, 41, 11, 104, 89, 31, 191, 10, 7, 191, 169, 11, 56, 3, 22, 0, 99, 1, 48, 22, 0, 99, 1, 48, 22, 0, 99, 1, 48, 22, 0, 99, 1, 48, 22, 0, 99, 1, 48, 22, 0, 99, 1, 48, 22, 0, 99, 1, 48, 22, 0, 99, 1, 48, 22, 0, 99, 1, 48, 22, 0, 99, 1, 48, 22, 0, 99, 1, 48, 22, 0, 99, 1, 48, 22, 0, 35, 47, 160, 247, 222, 183, 252, 156, 232, 253, 127, 212, 63, 75, 52, 2, 200, 143, 128, 239, 142, 5, 192, 88, 0, 140, 5, 192, 88, 0, 140, 5, 192, 88, 0, 140, 5, 192, 88, 0, 140, 5, 192, 88, 0, 140, 5, 192, 88, 0, 140, 5, 192, 88, 0, 204, 91, 0, 0, 0, 255, 255, 202, 6, 200, 86, 41, 189, 180, 241, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130,
+		137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 96, 0, 0, 0, 96, 8, 6, 0, 0, 0, 226, 152, 119, 56, 0, 0, 2, 18, 73, 68, 65, 84, 120, 156, 236, 155, 193, 113, 27, 49, 16, 4, 87, 46, 39, 115, 47, 5, 224, 84, 252, 87, 84, 118, 170, 246, 71, 172, 58, 243, 225, 34, 132, 197, 245, 128, 236, 126, 83, 71, 96, 154, 187, 11, 162, 196, 111, 37, 40, 10, 128, 81, 0, 140, 2, 96, 20, 0, 163, 0, 24, 5, 192, 40, 0, 70, 1, 48, 10, 128, 81, 0, 140, 2, 96, 20, 0, 163, 0, 24, 5, 192, 40, 0, 230, 123, 211, 115, 254, 52, 61, 103, 55, 222, 102, 31, 208, 81, 1, 175, 26, 126, 117, 236, 221, 22, 4, 163, 0, 152, 41, 1, 63, 63, 62, 126, 244, 45, 229, 53, 153, 30, 34, 47, 62, 3, 106, 54, 67, 91, 16, 76, 135, 128, 142, 42, 218, 149, 233, 189, 119, 134, 55, 210, 138, 82, 165, 93, 190, 7, 170, 5, 37, 206, 13, 100, 77, 157, 2, 70, 63, 17, 73, 18, 70, 215, 210, 86, 193, 221, 21, 176, 163, 4, 44, 252, 90, 212, 130, 82, 251, 123, 7, 237, 123, 91, 53, 3, 70, 22, 74, 86, 1, 126, 112, 88, 54, 132, 143, 227, 253, 247, 192, 203, 9, 9, 15, 191, 231, 224, 94, 134, 88, 221, 46, 208, 254, 250, 31, 98, 214, 181, 250, 24, 154, 56, 148, 99, 194, 175, 139, 190, 7, 236, 60, 148, 151, 175, 61, 241, 46, 104, 101, 21, 36, 28, 123, 255, 225, 42, 1, 9, 173, 40, 170, 245, 220, 184, 178, 2, 72, 9, 145, 225, 23, 208, 130, 8, 9, 177, 225, 23, 52, 3, 146, 135, 242, 229, 107, 75, 28, 194, 247, 204, 84, 65, 220, 208, 189, 135, 18, 112, 69, 43, 138, 110, 61, 55, 200, 10, 24, 218, 240, 113, 188, 255, 26, 120, 249, 22, 225, 163, 111, 124, 98, 197, 133, 24, 126, 201, 246, 40, 9, 51, 160, 251, 230, 116, 155, 240, 43, 68, 64, 231, 205, 105, 196, 13, 231, 8, 248, 39, 224, 196, 108, 223, 222, 166, 239, 159, 137, 168, 128, 79, 102, 78, 70, 91, 134, 95, 97, 2, 234, 162, 96, 98, 194, 175, 180, 197, 156, 88, 249, 5, 42, 106, 207, 105, 21, 176, 154, 168, 240, 43, 88, 192, 138, 160, 226, 194, 175, 96, 1, 213, 28, 88, 100, 248, 21, 46, 160, 154, 130, 139, 13, 191, 54, 16, 240, 244, 40, 0, 70, 1, 48, 10, 128, 81, 0, 140, 2, 96, 20, 0, 163, 0, 24, 5, 192, 40, 0, 70, 1, 48, 10, 128, 81, 0, 140, 2, 96, 20, 0, 163, 0, 24, 5, 192, 40, 0, 70, 1, 48, 10, 128, 81, 0, 140, 2, 96, 20, 0, 163, 0, 24, 5, 192, 40, 0, 102, 7, 1, 111, 95, 249, 57, 209, 231, 223, 68, 255, 91, 162, 4, 176, 67, 5, 60, 53, 10, 128, 81, 0, 140, 2, 96, 20, 0, 163, 0, 24, 5, 192, 40, 0, 70, 1, 48, 10, 128, 81, 0, 140, 2, 96, 20, 0, 163, 0, 24, 5, 192, 252, 13, 0, 0, 255, 255, 86, 193, 54, 0, 43, 199, 136, 143, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130,
 	})
+
 	// loadFilterButton, err := fyne.LoadResourceFromPath("./icons/filter.png")
 	// if err != nil {
 	// 	appLogger.Fatal("Failed to load filter button: ", err)
@@ -474,51 +478,75 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 	// create a placeholder image
 	placeholderResource := fyne.NewStaticResource("placeholder", []byte{})
 	// imgButton := newImageButton(placeholderResource, nil, nil, nil)
-	imgButton := newImageButton(placeholderResource)
 
-	resourceChan := make(chan fyne.Resource, 1)
+	if filepath.Ext(path) == ".gif" {
+		appLogger.Println("Fix Gif Not Gifing...")
 
-	// claude ai solution to load images in bg
-	go func() {
-		// load the image as a fyne resource
-		resource, err := loadImageResourceThumbnailEfficient(path)
+		// imgButton, err := fyneGif.NewAnimatedGifFromResource(placeholderResource)
+		testPath, err := storage.ParseURI("file://" + path)
 		if err != nil {
-			appLogger.Printf("No resource image empty %s: %v", path, err)
-			resourceChan <- placeholderResource
+			appLogger.Fatal("Failed to parse uri: ", err)
+		}
+		gifButton, err := fyneGif.NewAnimatedGif(testPath)
+		if err != nil {
+			appLogger.Fatal("Failed to load gif: ", err)
+		}
+		gifButton.Show()
+		// gifButton.Resize(fyne.NewSize(200, 200))
+		gifButton.Start()
+
+		// make a parent container to hold the image button and label
+		// gifTile := container.NewVBox(container.NewPadded(gifButton))
+		// imageContainer.Add(gifTile)
+		imageContainer.Add(container.NewPadded(gifButton))
+	} else {
+		imgButton := newImageButton(placeholderResource)
+
+		resourceChan := make(chan fyne.Resource, 1)
+
+		// claude ai solution to load images in bg
+		go func() {
+			// load the image as a fyne resource
+			resource, err := loadImageResourceThumbnailEfficient(path)
+			if err != nil {
+				appLogger.Printf("No resource image empty %s: %v", path, err)
+				resourceChan <- placeholderResource
+				canvas.Refresh(imgButton)
+				return
+			}
+
+			// set the image button image to the resource
+			imgButton.image.Resource = resource
+			imgButton.image.Translucency = 0
+			// imgButton.image.Refresh()
 			canvas.Refresh(imgButton)
-			return
+			resourceChan <- resource
+		}()
+
+		resource := <-resourceChan
+		imgButton.onTapped = func() {
+			// updates the sidebar
+			updateSidebar(db, w, path, resource, sidebar, sidebarScroll, split, a, imageContainer)
 		}
 
-		// set the image button image to the resource
-		imgButton.image.Resource = resource
-		imgButton.image.Translucency = 0
-		// imgButton.image.Refresh()
-		canvas.Refresh(imgButton)
-		resourceChan <- resource
-	}()
+		imgButton.onLongTap = func() {
+			selectedFiles = append(selectedFiles, path)
+			appLogger.Println("Added new file: ", path)
+			appLogger.Println("Selected files: ", selectedFiles)
+			imgButton.image.Translucency = 0.7
+			canvas.Refresh(imgButton)
+		}
 
-	resource := <-resourceChan
-	imgButton.onTapped = func() {
-		// updates the sidebar
-		updateSidebar(db, w, path, resource, sidebar, sidebarScroll, split, a, imageContainer)
+		imgButton.onRightClick = func() {
+			appLogger.Println("Add functionality to open menu to add to archive and compress")
+			utilwindows.ShowRightClickMenu(w, selectedFiles, a)
+		}
+
+		// make a parent container to hold the image button and label
+		imageTile := container.NewVBox(container.NewPadded(imgButton))
+		imageContainer.Add(imageTile)
 	}
 
-	imgButton.onLongTap = func() {
-		selectedFiles = append(selectedFiles, path)
-		appLogger.Println("Added new file: ", path)
-		appLogger.Println("Selected files: ", selectedFiles)
-		imgButton.image.Translucency = 0.7
-		canvas.Refresh(imgButton)
-	}
-
-	imgButton.onRightClick = func() {
-		appLogger.Println("Add functionality to open menu to add to archive and compress")
-		utilwindows.ShowRightClickMenu(w, selectedFiles, a)
-	}
-
-	// make a parent container to hold the image button and label
-	imageTile := container.NewVBox(container.NewPadded(imgButton))
-	imageContainer.Add(imageTile)
 }
 
 // UNDER NO CIRCUMSTANCES CHANGE THE ORDER IN displayImage func OR THERE WILL BE ERRORS WHEN FYNE IS LOADING IMAGES

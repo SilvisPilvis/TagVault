@@ -1,7 +1,7 @@
 package main_test
 
 import (
-	"main/goexport/fileutils"
+	"main/pkg/fileutils"
 	"path/filepath"
 	"strings"
 	"testing"
