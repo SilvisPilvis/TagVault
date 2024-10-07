@@ -48,14 +48,48 @@ func HexToHSV(hex string) (float64, float64, float64) {
 		return 0, 0, 0
 	}
 
-	rgb, err := strconv.ParseUint(hex, 16, 32)
-	if err != nil {
-		return 0, 0, 0
-	}
-	return float64((rgb>>16)&0xFF) / 255, float64((rgb >> 8 & 0xFF) / 255), float64((rgb & 0xFF) / 255)
+	// Convert hex to RGB
+	r, _ := strconv.ParseUint(hex[:2], 16, 8)
+	g, _ := strconv.ParseUint(hex[2:4], 16, 8)
+	b, _ := strconv.ParseUint(hex[4:6], 16, 8)
+
+	// Convert RGB to HSV
+	h, s, v := rgbToHSV(float64(r)/255, float64(g)/255, float64(b)/255)
+
+	return h, s, v
 }
 
-func HexToRgb(hex string) (uint8, uint8, uint8) {
+func rgbToHSV(r, g, b float64) (float64, float64, float64) {
+	max := max(r, g, b)
+	min := min(r, g, b)
+	h := 0.0
+	s := 0.0
+	v := max
+
+	d := max - min
+	if max != 0 {
+		s = d / max
+	}
+
+	if d != 0 {
+		switch max {
+		case r:
+			h = (g - b) / d
+		case g:
+			h = 2 + (b-r)/d
+		case b:
+			h = 4 + (r-g)/d
+		}
+		h *= 60
+		if h < 0 {
+			h += 360
+		}
+	}
+
+	return h / 360, s, v
+}
+
+func HexToRgb(hex string) (float64, float64, float64) {
 	hex = strings.TrimPrefix(hex, "#")
 	if len(hex) != 6 {
 		return 0, 0, 0
@@ -65,7 +99,7 @@ func HexToRgb(hex string) (uint8, uint8, uint8) {
 	if err != nil {
 		return 0, 0, 0
 	}
-	return uint8(rgb >> 16), uint8(rgb >> 8 & 0xFF), uint8(rgb & 0xFF)
+	return float64(rgb >> 16), float64(rgb >> 8 & 0xFF), float64(rgb & 0xFF)
 }
 
 // Helper function to convert hex color to color.Color

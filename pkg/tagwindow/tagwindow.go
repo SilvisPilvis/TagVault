@@ -33,7 +33,6 @@ func ShowCreateTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *optio
 
 	if edit {
 		colorPreviewRect = canvas.NewRectangle(tagColor)
-		// colorPreviewRect.FillColor = tagColor
 	} else {
 		colorPreviewRect = canvas.NewRectangle(color.NRGBA{0, 0, 130, 255})
 	}
@@ -62,9 +61,12 @@ func ShowCreateTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *optio
 		for _, slider := range []*widget.Slider{r, g, b} {
 			slider.OnChanged = func(_ float64) { updateColor() }
 		}
-		// if edit {
-		// 	r.Value, g.Value, b.Value, _ = tagColor.RGBA()
-		// }
+		if edit {
+			rc, gc, bc := colorutils.HexToRgb(tagHex)
+			r.SetValue(rc)
+			g.SetValue(gc)
+			b.SetValue(bc)
+		}
 		content = container.NewVBox(
 			widget.NewLabel("Color preview:"),
 			colorPreviewRect,
@@ -89,9 +91,13 @@ func ShowCreateTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *optio
 		for _, slider := range []*widget.Slider{h, s, v} {
 			slider.OnChanged = func(_ float64) { updateColor() }
 		}
-		// if edit {
-		// 	colorPreviewRect.FillColor = tagColor
-		// }
+		if edit {
+			hc, sc, vc := colorutils.HexToHSV(tagHex)
+			h.SetValue(hc * 360)
+			s.SetValue(sc * 100)
+			v.SetValue(vc * 100)
+			updateColor()
+		}
 		content = container.NewVBox(
 			widget.NewLabel("Color preview:"),
 			colorPreviewRect,
