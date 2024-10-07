@@ -42,6 +42,32 @@ func HSVToHex(h, s, v float64) string {
 	return fmt.Sprintf("#%02X%02X%02X", uint8(r), uint8(g), uint8(b))
 }
 
+func HexToHSV(hex string) (float64, float64, float64) {
+	hex = strings.TrimPrefix(hex, "#")
+	if len(hex) != 6 {
+		return 0, 0, 0
+	}
+
+	rgb, err := strconv.ParseUint(hex, 16, 32)
+	if err != nil {
+		return 0, 0, 0
+	}
+	return float64((rgb>>16)&0xFF) / 255, float64((rgb >> 8 & 0xFF) / 255), float64((rgb & 0xFF) / 255)
+}
+
+func HexToRgb(hex string) (uint8, uint8, uint8) {
+	hex = strings.TrimPrefix(hex, "#")
+	if len(hex) != 6 {
+		return 0, 0, 0
+	}
+
+	rgb, err := strconv.ParseUint(hex, 16, 32)
+	if err != nil {
+		return 0, 0, 0
+	}
+	return uint8(rgb >> 16), uint8(rgb >> 8 & 0xFF), uint8(rgb & 0xFF)
+}
+
 // Helper function to convert hex color to color.Color
 func HexToColor(hex string) (color.Color, error) {
 	hex = strings.TrimPrefix(hex, "#")

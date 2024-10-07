@@ -268,6 +268,35 @@ func RemoveTagFromImage(db *sql.DB, imageId int, tagId int) error {
 	return err
 }
 
+func GetTags(db *sql.DB) (map[int]string, error) {
+	rows, err := db.Query("SELECT id, name FROM Tag")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tag map[int]string
+	for rows.Next() {
+		var id int
+		var name string
+		if err := rows.Scan(&id, &name); err != nil {
+			return nil, err
+		}
+
+		if tag == nil {
+			tag = make(map[int]string)
+		}
+		tag[id] = name
+	}
+	return tag, nil
+}
+
+func GetTagColorById(db *sql.DB, tagId int) (string, error) {
+	var tagColor string
+	err := db.QueryRow("SELECT color FROM Tag WHERE id = ?", tagId).Scan(&tagColor)
+	return tagColor, err
+}
+
 // func init() {
 // 	Db, err := sql.Open("sqlite3", "file:../index.db")
 // 	if err != nil {

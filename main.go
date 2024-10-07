@@ -293,7 +293,8 @@ func main() {
 		appLogger.Println("This is first boot")
 		homeDir, _ := os.UserHomeDir()
 		displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, content)
-		displayImages(homeDir + "/Pictures/wallpapers")
+		displayImages(homeDir + "/Pictures")
+		// displayImages(homeDir + "/Pictures/wallpapers")
 	} else {
 		dbImages, err := database.GetImagesFromDatabase(db, page, appOptions.ImageNumber)
 		if err != nil {
@@ -543,7 +544,7 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 
 	createTagButton := widget.NewButton("Create Tag", func() {
 		// showCreateTagWindow(a, w, db)
-		tagwindow.ShowCreateTagWindow(a, w, db, appOptions)
+		tagwindow.ShowCreateTagWindow(a, w, db, appOptions, false, "", 0)
 	})
 
 	sidebar.Add(paddedImg)

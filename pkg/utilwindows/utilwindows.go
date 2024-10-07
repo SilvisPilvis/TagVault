@@ -11,7 +11,9 @@ import (
 	"main/pkg/apptheme"
 	"main/pkg/archives"
 	"main/pkg/colorutils"
+	"main/pkg/database"
 	"main/pkg/options"
+	"main/pkg/tagwindow"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -21,6 +23,7 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -156,6 +159,38 @@ func ShowColorPickerWindow(propertyName string, colorPreview *canvas.Rectangle, 
 	updateColor() // Initial color update
 }
 
+func ShowAllTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *options.Options) {
+	tagEditWindow := a.NewWindow("Edit Tag")
+
+	content := container.NewVBox()
+	scroll := container.NewVScroll(content)
+	tags, _ := database.GetTags(db)
+
+	if len(tags) == 0 {
+		content.Add(widget.NewLabel("No tags found."))
+		tagEditWindow.SetContent(scroll)
+		tagEditWindow.Resize(fyne.NewSize(300, 450))
+		tagEditWindow.Show()
+		return
+	}
+
+	for i := 1; i <= len(tags); i++ {
+		content.Add(
+			container.NewHBox(
+				widget.NewLabel(tags[i]),
+				widget.NewButtonWithIcon("Edit", theme.DocumentCreateIcon(), func() {
+					tagwindow.ShowCreateTagWindow(a, parent, db, opts, true, tags[i], i)
+					// ShowEditTagWindow(a, parent, db, i, scroll) // replace this with create tag window but update statement
+				}),
+			),
+		)
+	}
+
+	tagEditWindow.SetContent(scroll)
+	tagEditWindow.Resize(fyne.NewSize(300, 450))
+	tagEditWindow.Show()
+}
+
 // Add a settings window
 func ShowSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *options.Options) {
 	settingsWindow := a.NewWindow("Settings")
@@ -245,6 +280,9 @@ func ShowSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *option
 		widget.NewLabel("Excluded directories"),
 		blackList,
 		widget.NewLabel("Tags"),
+		widget.NewButton("Edit tags", func() {
+			ShowAllTagWindow(a, parent, db, opts)
+		}),
 		tagList,
 		timeZone,
 		// themeEditorButton,

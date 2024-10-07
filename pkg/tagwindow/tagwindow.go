@@ -16,15 +16,34 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-func ShowCreateTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *options.Options) {
-	tagWindow := a.NewWindow("Create Tag")
-	tagWindow.SetTitle("Create a Tag")
+func ShowCreateTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *options.Options, edit bool, tag string, tagId int) {
 
-	colorPreviewRect := canvas.NewRectangle(color.NRGBA{0, 0, 130, 255})
+	tagWindow := a.NewWindow("Create Tag")
+
+	tagHex, err := database.GetTagColorById(db, tagId)
+	if err != nil {
+		log.Fatal(err)
+	}
+	tagColor, _ := colorutils.HexToColor(tagHex)
+	if edit {
+		tagWindow.SetTitle("Edit a Tag")
+	}
+
+	var colorPreviewRect *canvas.Rectangle
+
+	if edit {
+		colorPreviewRect = canvas.NewRectangle(tagColor)
+		// colorPreviewRect.FillColor = tagColor
+	} else {
+		colorPreviewRect = canvas.NewRectangle(color.NRGBA{0, 0, 130, 255})
+	}
 	colorPreviewRect.SetMinSize(fyne.NewSize(64, 128))
 	colorPreviewRect.CornerRadius = 5
 
 	stringInput := widget.NewEntry()
+	if edit {
+		stringInput.SetText(tag)
+	}
 	stringInput.SetPlaceHolder("Enter Tag name")
 
 	var content *fyne.Container
@@ -43,6 +62,9 @@ func ShowCreateTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *optio
 		for _, slider := range []*widget.Slider{r, g, b} {
 			slider.OnChanged = func(_ float64) { updateColor() }
 		}
+		// if edit {
+		// 	r.Value, g.Value, b.Value, _ = tagColor.RGBA()
+		// }
 		content = container.NewVBox(
 			widget.NewLabel("Color preview:"),
 			colorPreviewRect,
@@ -67,6 +89,9 @@ func ShowCreateTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *optio
 		for _, slider := range []*widget.Slider{h, s, v} {
 			slider.OnChanged = func(_ float64) { updateColor() }
 		}
+		// if edit {
+		// 	colorPreviewRect.FillColor = tagColor
+		// }
 		content = container.NewVBox(
 			widget.NewLabel("Color preview:"),
 			colorPreviewRect,
