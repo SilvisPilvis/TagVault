@@ -26,8 +26,8 @@ func (DefaultTheme) Color(c fyne.ThemeColorName, v fyne.ThemeVariant) color.Colo
 	case theme.ColorNameFocus:
 		return color.NRGBA{R: 0xa7, G: 0x2c, B: 0xd4, A: 0x7f}
 	case theme.ColorNameForeground:
-		// return color.NRGBA{R: 0xe6, G: 0xf7, B: 0xfa, A: 0xff} // button icon color
-		return color.NRGBA{R: 0x04, G: 0x10, B: 0x11, A: 0xff}
+		return color.NRGBA{R: 0xe6, G: 0xf7, B: 0xfa, A: 0xff} // button icon & text color light
+		// return color.NRGBA{R: 0x04, G: 0x10, B: 0x11, A: 0xff} // button icon & text color dark
 	case theme.ColorNameHover:
 		return color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xf}
 	case theme.ColorNameInputBackground:

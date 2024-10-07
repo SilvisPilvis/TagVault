@@ -177,19 +177,24 @@ func ShowSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *option
 	}
 
 	// Create a list of all excluded directories
+	// optimized
+	// Create a slice of excluded directories
+	excludedDirs := make([]string, 0, len(opts.ExcludedDirs))
+	for dir := range opts.ExcludedDirs {
+		excludedDirs = append(excludedDirs, dir)
+	}
+
+	// Create a list of all excluded directories
 	blackList := widget.NewList(
 		func() int {
-			return len(opts.ExcludedDirs)
+			return len(excludedDirs)
 		},
 		func() fyne.CanvasObject {
-			return widget.NewLabel("Excluded directory")
+			return widget.NewLabel("")
 		},
 		func(id widget.ListItemID, item fyne.CanvasObject) {
-			for excluded := range opts.ExcludedDirs {
-				label := item.(*widget.Label)
-				label.SetText(excluded)
-				// widget.NewLabel(excluded)
-			}
+			label := item.(*widget.Label)
+			label.SetText(excludedDirs[id])
 		},
 	)
 

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -35,9 +36,20 @@ func IsExcludedDir(dir string, blackList map[string]int) bool {
 }
 
 func (opts Options) InitDefault() *Options {
+	cwd, _ := os.Getwd()
 	return &Options{
-		DatabasePath:  fmt.Sprintf("./%s.db", runtime.GOOS),
-		ExcludedDirs:  map[string]int{},
+		DatabasePath: fmt.Sprintf("./%s.db", runtime.GOOS),
+		ExcludedDirs: map[string]int{
+			"Games":        1,
+			"games":        1,
+			"go":           1,
+			"TagVault":     1,
+			"Android":      1,
+			"android":      1,
+			"node_modules": 1,
+			cwd:            1,
+			// filepath.Dir(os.Args[0]): 1,
+		},
 		Profiling:     false,
 		Timezone:      3,
 		SortDesc:      true,

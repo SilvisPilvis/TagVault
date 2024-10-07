@@ -191,7 +191,7 @@ func main() {
 	if !optionsExist {
 		appLogger.Println("Creating options")
 		appOptions = new(options.Options).InitDefault()
-		appOptions.ExcludedDirs = map[string]int{"Games": 1, "games": 1, "go": 1, "TagVault": 1, "Android": 1, "android": 1, "node_modules": 1} // try to add filepath.Base(os.Getwd()): 1
+		// appOptions.ExcludedDirs = map[string]int{"Games": 1, "games": 1, "go": 1, "TagVault": 1, "Android": 1, "android": 1, "node_modules": 1} // try to add filepath.Base(os.Getwd()): 1
 		utilwindows.ShowChooseDirWindow(a, appOptions, appLogger, db)
 		err = options.SaveOptionsToDB(db, appOptions)
 		if err != nil {
@@ -270,8 +270,6 @@ func main() {
 
 	optContainer := container.NewAdaptiveGrid(2, filterButton, settingsButton)
 
-	// searchContainer := container.NewGridWithRows(2, form, optContainer)
-
 	tabs := container.NewAppTabs(
 		container.NewTabItem("Images", content),
 		// widget.NewButtonWithIcon("Open new Tab", "Plus", func() {
@@ -281,13 +279,15 @@ func main() {
 	tabs.SetTabLocation(container.TabLocationTop)
 
 	controls := container.NewBorder(nil, nil, nil, optContainer, form)
-	// controls := container.NewBorder(nil, nil, nil, optContainer, form, tabs) // testing with tabs
-	// controls := container.NewAdaptiveGrid(2, tabs, searchContainer)
+
 	mainContainer := container.NewBorder(controls, nil, nil, nil, container.NewPadded(split))
+	// mainContainer.Add(tabs)
 
 	appLogger.Printf("Page: %d, ImageNumber: %d", page, appOptions.ImageNumber)
 
-	appLogger.Println("ExcludedDirs: ", appOptions.ExcludedDirs)
+	// appLogger.Println("ExcludedDirs: ", appOptions.ExcludedDirs)
+	// appLogger.Println("Current Binary Directory: ", filepath.Dir(os.Args[0]))
+	// appLogger.Println("Current Binary Directory: ", cwd)
 
 	if appOptions.FirstBoot {
 		appLogger.Println("This is first boot")
@@ -555,13 +555,13 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	if prevoiusImage == path && sidebarScroll.Visible() {
 		sidebarScroll.Hide()
 		split.Trailing.Hide()
-		split.Offset = 0
+		split.SetOffset(0.0)
 		w.Content().Refresh()
 		//	split.Offset = 0.65 // was 0.7 by default
 	} else {
 		sidebarScroll.Show()
-		split.Offset = 0.65
-		sidebarScroll.Offset.X = 0.65
+		split.SetOffset(0.65)
+		// sidebarScroll.Offset.X = 0.65
 		prevoiusImage = path
 	}
 
