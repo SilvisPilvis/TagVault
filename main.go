@@ -35,6 +35,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/driver/desktop"
+
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
@@ -167,6 +168,7 @@ var (
 	page          = 0
 	selectedFiles = []string{}
 	home, _       = os.UserHomeDir()
+	prevoiusImage = ""
 )
 
 func main() {
@@ -175,43 +177,6 @@ func main() {
 
 	appLogger.Println("Check Obsidian Todo list")
 	appLogger.Println("Make displayImages work with getImagesFromDatabase")
-
-	// gif, err := widget.NewG
-
-	// appLogger.Println("Downloading ffmpeg")
-	// err := ffmpeg.DownloadFFmpegLinux()
-	// if err != nil {
-	// 	appLogger.Println(err)
-	// }
-	// appLogger.Println("Downloaded ffmpeg")
-	// os.Exit(0)
-
-	// appLogger.Println("Minimize widget updates:
-	// Fyne's object tree walking is often triggered by widget updates. Try to reduce unnecessary updates by:
-
-	// Only updating widgets when their data actually changes
-	// Using Fyne's binding system for automatic updates
-	// Batching updates where possible
-
-	// Optimize layout:
-	// Complex layouts can lead to more time-consuming tree walks. Consider:
-
-	// Simplifying your UI structure
-	// Using containers efficiently (e.g., VBox, HBox instead of nested containers)
-	// Avoiding deep nesting of widgets
-
-	// Use canvas objects:
-	// For static or infrequently changing elements, consider using canvas objects instead of widgets. These are generally more lightweight.
-	// Implement custom widgets:
-	// If you have complex custom widgets, ensure they're implemented efficiently. Override the Refresh() method to minimize unnecessary redraws.
-	// Lazy loading:
-	// For large datasets or complex UIs, implement lazy loading techniques to render only visible elements.
-	// Caching:
-	// Implement caching mechanisms for expensive computations or frequently accessed data.
-	// Background processing:
-	// Move time-consuming operations off the main thread using goroutines, updating the UI only when necessary.
-	// Profiling and benchmarking:
-	// Continue using Go's profiling tools to identify specific bottlenecks. You might want to create benchmarks for critical parts of your app.")
 
 	a := app.NewWithID("TagVault")
 	w := setupMainWindow(a)
@@ -480,7 +445,7 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 	// imgButton := newImageButton(placeholderResource, nil, nil, nil)
 
 	if filepath.Ext(path) == ".gif" {
-		appLogger.Println("Fix Gif Not Gifing...")
+		// appLogger.Println("Fix Gif Not Gifing...")
 
 		// imgButton, err := fyneGif.NewAnimatedGifFromResource(placeholderResource)
 		testPath, err := storage.ParseURI("file://" + path)
@@ -495,9 +460,6 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 		// gifButton.Resize(fyne.NewSize(200, 200))
 		gifButton.Start()
 
-		// make a parent container to hold the image button and label
-		// gifTile := container.NewVBox(container.NewPadded(gifButton))
-		// imageContainer.Add(gifTile)
 		imageContainer.Add(container.NewPadded(gifButton))
 	} else {
 		imgButton := newImageButton(placeholderResource)
@@ -588,15 +550,19 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	sidebar.Add(container.NewPadded(container.NewGridWithColumns(2, addTagButton, createTagButton)))
 
 	// Show sidebar if hidden else show
-	//if sidebarScroll.Visible() {
-	//	sidebarScroll.Hide()
-	//	split.Offset = 0
-	//} else {
-	//	sidebarScroll.Show()
-	//	split.Offset = 0.65 // was 0.7 by default
-	//}
-	sidebarScroll.Show()
-	split.Offset = 0.65
+	if prevoiusImage == path && sidebarScroll.Visible() {
+		sidebarScroll.Hide()
+		split.Trailing.Hide()
+		split.Offset = 0
+		w.Content().Refresh()
+		//	split.Offset = 0.65 // was 0.7 by default
+	} else {
+		sidebarScroll.Show()
+		split.Offset = 0.65
+		sidebarScroll.Offset.X = 0.65
+		prevoiusImage = path
+	}
+
 	imageContainer.Refresh()
 	tagDisplay.Refresh()
 	sidebar.Refresh()
