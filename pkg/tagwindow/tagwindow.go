@@ -126,9 +126,32 @@ func ShowCreateTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *optio
 		tagWindow.Close()
 	})
 
+	updateButton := widget.NewButton("Edit Tag", func() {
+		tagName := stringInput.Text
+		if tagName == "" {
+			dialog.ShowInformation("Error", "Tag name cannot be empty", tagWindow)
+			return
+		}
+
+		hexColor := getHexColor()
+
+		_, err := db.Exec("INSERT INTO Tag (name, color) VALUES (?, ?)", tagName, hexColor)
+		if err != nil {
+			dialog.ShowError(fmt.Errorf("showCreateTagWindow: %w", err), tagWindow)
+			return
+		}
+
+		dialog.ShowInformation("Tag Created", fmt.Sprintf("Tag Name: %s\nColor: %s", tagName, hexColor), tagWindow)
+		tagWindow.Close()
+	})
+
 	content.Add(widget.NewLabel("Enter tag name:"))
 	content.Add(stringInput)
-	content.Add(createButton)
+	if edit {
+		content.Add(updateButton)
+	} else {
+		content.Add(createButton)
+	}
 
 	tagWindow.SetContent(content)
 	tagWindow.Resize(fyne.NewSize(300, 400))
