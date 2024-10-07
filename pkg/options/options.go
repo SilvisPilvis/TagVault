@@ -72,13 +72,43 @@ func SaveOptionsToDB(db *sql.DB, options *Options) error {
 		return fmt.Errorf("error marshaling ExifFields: %v", err)
 	}
 
-	// Prepare SQL statement
-	stmt, err := db.Prepare(`
-		INSERT OR REPLACE INTO Options (
+	var numOptionsDb int64
+	err = db.QueryRow("SELECT COUNT(*) FROM Options").Scan(&numOptionsDb)
+	if err != nil {
+		return fmt.Errorf("error getting number of options: %v", err)
+	}
+
+	var query string
+	switch numOptionsDb {
+	case 0:
+		options.FirstBoot = true
+		query = `
+		INSERT INTO Options (
 			DatabasePath, ExcludedDirs, Profiling, Timezone, SortDesc, 
 			UseRGB, ExifFields, ImageNumber, ThumbnailSize, FirstBoot
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+	case 1:
+		options.FirstBoot = false
+		query = `
+		UPDATE Options SET
+		DatabasePath = ?,
+		ExcludedDirs = ?,
+		Profiling = ?,
+		Timezone = ?,
+		SortDesc = ?,
+		UseRGB = ?,
+		ExifFields = ?,
+		ImageNumber = ?,
+		ThumbnailSize = ?,
+		FirstBoot = ?
+		WHERE id = 1;
+		`
+	default:
+		return fmt.Errorf("error getting number of options: %v", err)
+	}
+
+	// Prepare SQL statement
+	stmt, err := db.Prepare(query)
 	if err != nil {
 		return fmt.Errorf("error preparing statement: %v", err)
 	}
@@ -110,7 +140,7 @@ func LoadOptionsFromDB(db *sql.DB) (*Options, error) {
 	row := db.QueryRow(`
 		SELECT DatabasePath, ExcludedDirs, Profiling, Timezone, SortDesc, 
 			   UseRGB, ExifFields, ImageNumber, ThumbnailSize, FirstBoot
-		FROM options LIMIT 1
+		FROM options WHERE id = 1 LIMIT 1
 	`)
 
 	var excludedDirsJSON, exifFieldsJSON string
