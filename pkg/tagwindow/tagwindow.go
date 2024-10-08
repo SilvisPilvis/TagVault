@@ -22,8 +22,11 @@ func ShowCreateTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *optio
 
 	tagHex, err := database.GetTagColorById(db, tagId)
 	if err != nil {
-		log.Fatal(err)
+		if edit {
+			log.Fatal("Tag Id: ", tagId, err)
+		}
 	}
+
 	tagColor, _ := colorutils.HexToColor(tagHex)
 	if edit {
 		tagWindow.SetTitle("Edit a Tag")
@@ -118,6 +121,10 @@ func ShowCreateTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *optio
 
 		_, err := db.Exec("INSERT INTO Tag (name, color) VALUES (?, ?)", tagName, hexColor)
 		if err != nil {
+			if err.Error() == "UNIQUE constraint failed: Tag.name" {
+				dialog.ShowInformation("Error", "Tag name already exists", tagWindow)
+				return
+			}
 			dialog.ShowError(fmt.Errorf("showCreateTagWindow: %w", err), tagWindow)
 			return
 		}
@@ -219,16 +226,16 @@ func ShowTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, imgId int, tagLis
 			buttons = append(buttons, container.NewPadded(container.NewStack(rect, button)))
 		}
 
-		tagWindow.Canvas().Refresh(content)
 		content.Remove(loadingLabel)
 		for _, button := range buttons {
 			content.Add(button)
 		}
+		tagWindow.Canvas().Refresh(content)
 	}()
 }
 
 // Modify the createTagDisplay function to include tag removal functionality
-func CreateTagDisplay(db *sql.DB, imageId int, appLogger *log.Logger) *fyne.Container {
+func CreateTagDisplay(db *sql.DB, imageId int, appLogger *log.Logger, sidebar *fyne.Container, w fyne.Window) *fyne.Container {
 	tagDisplay := container.NewAdaptiveGrid(3)
 
 	rows, err := db.Query("SELECT Tag.id, Tag.name, Tag.color FROM FileTag INNER JOIN Tag ON FileTag.tagId = Tag.id WHERE FileTag.fileId = ?", imageId)
@@ -260,13 +267,22 @@ func CreateTagDisplay(db *sql.DB, imageId int, appLogger *log.Logger) *fyne.Cont
 						dialog.ShowError(err, nil)
 					} else {
 						// remove the tag from the tag display
-						// refreshSidebar()
+						database.RemoveTagFromImage(db, imageId, tagId)
+						tagButton.Hide()
+						// tagButton.Hide()
+						// tagDisplay.Remove()
+						// rect.Hide()
+						// parent.Content().Refresh()
 					}
 				}
-			}, nil)
+			}, w)
+			rect.Hide()
+			return
+			// sidebar.Remove(tagButton)
 		}
 		// New version with padding
 		tagDisplay.Add(container.NewPadded(container.NewStack(rect, tagButton)))
+		tagDisplay.Refresh()
 	}
 
 	return tagDisplay

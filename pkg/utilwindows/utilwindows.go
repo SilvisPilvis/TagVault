@@ -160,7 +160,7 @@ func ShowColorPickerWindow(propertyName string, colorPreview *canvas.Rectangle, 
 }
 
 func ShowAllTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *options.Options) {
-	tagEditWindow := a.NewWindow("Edit Tag")
+	tagEditWindow := a.NewWindow("Show Tags")
 
 	content := container.NewVBox()
 	scroll := container.NewVScroll(content)
@@ -174,12 +174,25 @@ func ShowAllTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *options.
 		return
 	}
 
-	for i := 1; i <= len(tags); i++ {
+	// for i := 1; i <= len(tags); i++ {
+	// 	content.Add(
+	// 		container.NewHBox(
+	// 			widget.NewLabel(tags[i]),
+	// 			widget.NewButtonWithIcon("Edit", theme.DocumentCreateIcon(), func() {
+	// 				tagwindow.ShowCreateTagWindow(a, parent, db, opts, true, tags[i], i)
+	// 				// ShowEditTagWindow(a, parent, db, i, scroll) // replace this with create tag window but update statement
+	// 			}),
+	// 		),
+	// 	)
+	// }
+
+	for k, v := range tags {
+		fmt.Println("Tag Key value: ", k, " ", v)
 		content.Add(
 			container.NewHBox(
-				widget.NewLabel(tags[i]),
+				widget.NewLabel(v),
 				widget.NewButtonWithIcon("Edit", theme.DocumentCreateIcon(), func() {
-					tagwindow.ShowCreateTagWindow(a, parent, db, opts, true, tags[i], i)
+					tagwindow.ShowCreateTagWindow(a, parent, db, opts, true, v, k)
 					// ShowEditTagWindow(a, parent, db, i, scroll) // replace this with create tag window but update statement
 				}),
 			),
@@ -280,7 +293,7 @@ func ShowSettingsWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *option
 		widget.NewLabel("Excluded directories"),
 		blackList,
 		widget.NewLabel("Tags"),
-		widget.NewButton("Edit tags", func() {
+		widget.NewButton("Show Tags", func() {
 			ShowAllTagWindow(a, parent, db, opts)
 		}),
 		tagList,
@@ -343,14 +356,24 @@ func ShowChooseDirWindow(a fyne.App, opts *options.Options, logger *log.Logger, 
 	chooseDirWindow.Show()
 }
 
-func ShowRightClickMenu(w fyne.Window, fileList []string, a fyne.App) {
+func mapToStringSlice(m map[string]bool) []string {
+	slice := make([]string, 0, len(m))
+	for k := range m {
+		slice = append(slice, k)
+	}
+	return slice
+}
+
+func ShowRightClickMenu(w fyne.Window, fileList map[string]bool, a fyne.App) {
 	home, _ := os.UserHomeDir()
 	now := time.Now()
 	formattedDate := now.Format("02-01-2006")
 
+	listedFiles := mapToStringSlice(fileList)
+
 	gzipButton := widget.NewButton("Create Gzip Archive", func() {
 		archivePath := filepath.Join(home, "Desktop", formattedDate+".tar.gz")
-		err := archives.CreateTarGzipArchive(archivePath, fileList, w)
+		err := archives.CreateTarGzipArchive(archivePath, listedFiles, w)
 		if err != nil {
 			dialog.ShowError(err, w)
 		} else {
@@ -360,7 +383,7 @@ func ShowRightClickMenu(w fyne.Window, fileList []string, a fyne.App) {
 
 	bzip2Button := widget.NewButton("Create Bzip2 Archive", func() {
 		archivePath := filepath.Join(home, "Desktop", formattedDate+".tar.bz2")
-		err := archives.CreateTarBzip2Archive(archivePath, fileList, w)
+		err := archives.CreateTarBzip2Archive(archivePath, listedFiles, w)
 		if err != nil {
 			dialog.ShowError(err, w)
 		} else {
@@ -370,7 +393,7 @@ func ShowRightClickMenu(w fyne.Window, fileList []string, a fyne.App) {
 
 	zipButton := widget.NewButton("Create Zip Archive", func() {
 		archivePath := filepath.Join(home, "Desktop", formattedDate+".zip")
-		err := archives.CreateZipArchive(archivePath, fileList, w)
+		err := archives.CreateZipArchive(archivePath, listedFiles, w)
 		if err != nil {
 			dialog.ShowError(err, w)
 		} else {
@@ -379,7 +402,7 @@ func ShowRightClickMenu(w fyne.Window, fileList []string, a fyne.App) {
 	})
 
 	encryptedButton := widget.NewButton("Create Encrypted Archive", func() {
-		showPasswordWindow(a, formattedDate, fileList, w)
+		showPasswordWindow(a, formattedDate, listedFiles, w)
 	})
 
 	content := container.NewVBox(

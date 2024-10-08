@@ -28,7 +28,13 @@ import (
 
 	// "main/pkg/fynecomponents/imgbtn"
 
+	"github.com/gen2brain/avif"
+	"github.com/jdeng/goheif"
+	"github.com/xfmoulet/qoi"
+	"golang.org/x/image/bmp"
 	"golang.org/x/image/draw"
+	"golang.org/x/image/tiff"
+	"golang.org/x/image/webp"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -167,7 +173,7 @@ var (
 	optionsExist  = false
 	appLogger     = logger.InitLogger()
 	page          = 0
-	selectedFiles = []string{}
+	selectedFiles = map[string]bool{}
 	home, _       = os.UserHomeDir()
 	prevoiusImage = ""
 )
@@ -255,12 +261,12 @@ func main() {
 		updateContentWithSearchResults(content, imagePaths, db, w, sidebar, sidebarScroll, split, a)
 	}
 
-	settingsButton := widget.NewButton("", func() {
+	settingsButton := widget.NewButtonWithIcon("", theme.SettingsIcon(), func() {
 		utilwindows.ShowSettingsWindow(a, w, db, appOptions)
 	})
-	settingsButton.Icon = theme.SettingsIcon()
+	// settingsButton.Icon = theme.SettingsIcon()
 
-	loadFilterButton := fyne.NewStaticResource("filterIcon", icon.FilterIcon)
+	loadFilterButton := fyne.NewStaticResource("filterIcon", icon.FilterIconDark)
 
 	filterButton := widget.NewButton("", func() {
 		// sidebarScroll.Show()
@@ -332,10 +338,7 @@ func setupMainWindow(a fyne.App) fyne.Window {
 	w.Resize(fyne.NewSize(1000, 600))
 
 	icon := fyne.NewStaticResource("icon", icon.AppIcon)
-	// icon, err := fyne.LoadResourceFromPath("./icon.ico")
-	// if err != nil {
-	// 	appLogger.Fatal("Failed to load icon: ", err)
-	// }
+
 	a.SetIcon(icon)
 	w.SetIcon(icon)
 
@@ -445,21 +448,20 @@ func createDisplayImagesFunctionFromDb(db *sql.DB, w fyne.Window, sidebar *fyne.
 func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.Container, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App) {
 	// create a placeholder image
 	placeholderResource := fyne.NewStaticResource("placeholder", []byte{})
-	// imgButton := newImageButton(placeholderResource, nil, nil, nil)
 
 	if filepath.Ext(path) == ".gif" {
 		// appLogger.Println("Fix Gif Not Gifing...")
 
 		// imgButton, err := fyneGif.NewAnimatedGifFromResource(placeholderResource)
-		testPath, err := storage.ParseURI("file://" + path)
+		gifPath, err := storage.ParseURI("file://" + path)
 		if err != nil {
 			appLogger.Fatal("Failed to parse uri: ", err)
 		}
-		gifButton, err := fyneGif.NewAnimatedGif(testPath)
+		gifButton, err := fyneGif.NewAnimatedGif(gifPath)
 		if err != nil {
 			appLogger.Fatal("Failed to load gif: ", err)
 		}
-		gifButton.Show()
+		// gifButton.Show()
 		// gifButton.Resize(fyne.NewSize(200, 200))
 		gifButton.Start()
 
@@ -495,11 +497,20 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 		}
 
 		imgButton.onLongTap = func() {
-			selectedFiles = append(selectedFiles, path)
-			appLogger.Println("Added new file: ", path)
+			// If image is not already selected and selectedFiles is 0 or bigger than 0
+			if len(selectedFiles) >= 0 && !selectedFiles[path] {
+				selectedFiles[path] = true
+				appLogger.Println("Added new file: ", path)
+				imgButton.image.Translucency = 0.7
+				canvas.Refresh(imgButton)
+				// If image is already selected and selectedFiles is 0 or bigger than 0
+			} else if len(selectedFiles) >= 0 && selectedFiles[path] {
+				appLogger.Println("Removed file: ", path)
+				delete(selectedFiles, path)
+				imgButton.image.Translucency = 0
+				canvas.Refresh(imgButton)
+			}
 			appLogger.Println("Selected files: ", selectedFiles)
-			imgButton.image.Translucency = 0.7
-			canvas.Refresh(imgButton)
 		}
 
 		imgButton.onRightClick = func() {
@@ -536,7 +547,7 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	fileType.Wrapping = fyne.TextWrapWord
 
 	imageId := database.GetImageId(db, path)
-	tagDisplay := tagwindow.CreateTagDisplay(db, imageId, appLogger)
+	tagDisplay := tagwindow.CreateTagDisplay(db, imageId, appLogger, sidebar, w)
 
 	addTagButton := widget.NewButton("+", func() {
 		tagwindow.ShowTagWindow(a, w, db, imageId, tagDisplay)
@@ -606,7 +617,18 @@ func loadImageResourceEfficient(path string) (fyne.Resource, error) {
 		img, _, err = image.Decode(file)
 	case ".png":
 		img, _, err = image.Decode(file)
-	// Add more cases for other image types if needed
+	case ".bmp":
+		img, err = png.Decode(file)
+	case ".webp":
+		img, err = webp.Decode(file)
+	case ".heic":
+		img, err = goheif.Decode(file)
+	case ".avif":
+		img, err = avif.Decode(file)
+	case ".qoi":
+		img, err = qoi.Decode(file)
+	case ".tiff", ".tif":
+		img, err = tiff.Decode(file)
 	default:
 		return nil, fmt.Errorf("unsupported image format")
 	}
@@ -639,6 +661,24 @@ func loadImageResourceEfficient(path string) (fyne.Resource, error) {
 		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
 	case ".png":
 		err = png.Encode(&buf, thumbImg)
+	case ".bmp":
+		// err = bmp.Encode(&buf, thumbImg)
+		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
+	case ".webp":
+		// err = chaiWebp.Encode(&buf, thumbImg, &chaiWebp.Options{Lossless: true})
+		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
+	case ".heic":
+		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
+	case ".avif":
+		// avif.Encode(&buf, thumbImg, avif.Options{Quality: 85})
+		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
+		os.Exit(1)
+	case ".qoi":
+		// err = qoi.Encode(&buf, thumbImg)
+		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
+	case ".tiff", ".tif":
+		// err = tiff.Encode(&buf, thumbImg, &tiff.Options{Compression: tiff.Deflate})
+		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
 	}
 	if err != nil {
 		return nil, err
@@ -664,22 +704,35 @@ func loadImageResourceThumbnailEfficient(path string) (fyne.Resource, error) {
 	}
 	defer file.Close()
 
-	// exif.RegisterParsers(mknote.All...)
-
-	// exifData, err := exif.Decode(file)
+	// Decode the image
+	// img, _, err := image.Decode(file)
 	// if err != nil {
-	// 	appLogger.Fatal("Exif decoding failed: ", err)
+	// 	return nil, err
 	// }
 
-	// artist, _ := exifData.Get(exif.Artist)
-	// appLogger.Println(artist.StringVal())
-	// appLogger.Println(exifData)
-	// appLogger.Println(exifData.Get(exif.Artist))
-	// appLogger.Println(exifData.Get(exif.XResolution))
-	// appLogger.Println(exifData.Get(exif.YResolution))
-
 	// Decode the image
-	img, _, err := image.Decode(file)
+	var img image.Image
+	// test:= image.Decode()
+	switch filepath.Ext(path) {
+	case ".jpg", ".jpeg":
+		img, _, err = image.Decode(file)
+	case ".png":
+		img, _, err = image.Decode(file)
+	case ".bmp":
+		img, err = bmp.Decode(file)
+	case ".webp":
+		img, err = webp.Decode(file)
+	case ".heic":
+		img, err = goheif.Decode(file)
+	case ".avif":
+		img, err = avif.Decode(file)
+	case ".qoi":
+		img, err = qoi.Decode(file)
+	case ".tiff", ".tif":
+		img, err = tiff.Decode(file)
+	default:
+		return nil, fmt.Errorf("unsupported image format")
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -715,6 +768,24 @@ func loadImageResourceThumbnailEfficient(path string) (fyne.Resource, error) {
 		err = png.Encode(&buf, thumbImg)
 	case ".gif":
 		err = gif.Encode(&buf, thumbImg, &gif.Options{NumColors: 256})
+	case ".bmp":
+		// img, err = png.Decode(file)
+		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
+	case ".webp":
+		// img, err = webp.Decode(file)
+		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
+	case ".heic":
+		// img, err = goheif.Decode(file)
+		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
+	case ".avif":
+		// img, err = avif.Decode(file)
+		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
+	case ".qoi":
+		// img, err = qoi.Decode(file)
+		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
+	case ".tiff", ".tif":
+		// img, err = tiff.Decode(file)
+		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
 	default:
 		return nil, fmt.Errorf("unsupported image format")
 	}

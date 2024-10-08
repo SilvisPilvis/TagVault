@@ -42,6 +42,7 @@ func setupTables(db *sql.DB) {
 		"CREATE INDEX IF NOT EXISTS idx_image_path ON File(path);", // Creates index on File.path to make searching by path faster
 		"CREATE TABLE IF NOT EXISTS `FileTag`(`id` INTEGER PRIMARY KEY NOT NULL, `fileId` INTEGER NOT NULL, `tagId` INTEGER NOT NULL);",
 		"CREATE TABLE IF NOT EXISTS `Options`(`id` INTEGER PRIMARY KEY NOT NULL, `DatabasePath` VARCHAR(255) NOT NULL, `ExcludedDirs` VARCHAR(255) NOT NULL, `Timezone` VARCHAR(1024) NOT NULL, `SortDesc` BOOLEAN DEFAULT true, `UseRGB` BOOLEAN DEFAULT false, `ImageNumber` INTEGER NOT NULL DEFAULT 20, `ThumbnailSize` INTEGER NOT NULL DEFAULT 256, `Profiling` BOOLEAN DEFAULT false, `ExifFields` VARCHAR(255), `FirstBoot` BOOLEAN DEFAULT false);",
+		// "INSERT INTO `Tag` (`name`, `color`) VALUES ('GIF', '#000000'), ('JPG', '#000000'), ('PNG', '#000000'), ('AVIF', '#000000'), ('WEBP', '#000000'), ('BMP', '#000000'), ('HEIC', '#000000'), ('TIFF', '#000000'), ('TIF', '#000000'), ('QOI', '#000000');",
 	}
 	for _, table := range tables {
 		if _, err := db.Exec(table); err != nil {
@@ -243,13 +244,24 @@ func DiscoverImages(db *sql.DB, blacklist map[string]int) (bool, error) {
 				return filepath.SkipDir
 			}
 			if fileutils.IsImageFileMap(path) {
-				_, err := stmt.Exec(path, path)
+				insertId, err := stmt.Exec(path, path)
 				if err != nil {
 					return fmt.Errorf("error inserting image path into database: %w", err)
 				}
+				lastId, _ := insertId.LastInsertId()
+
+				extension := filepath.Ext(path)
+				extension = strings.TrimPrefix(extension, ".")
+				extension = strings.ToUpper(extension)
+				var extensionId int
+
+				db.QueryRow("SELECT id FROM Tag WHERE name = ?", extension).Scan(&extensionId)
+
+				db.Exec("INSERT INTO FileTag (fileId, tagId) VALUES (?, ?)", lastId, extensionId)
+
 				count++
 			}
-			appLogger.Println("File not image or already in db:\n", path)
+			// appLogger.Println("File not image or already in db:\n", path)
 			return nil
 		})
 		if err != nil {

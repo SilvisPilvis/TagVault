@@ -21,30 +21,30 @@ This apps current amazing features are:
 
 Coming soon:
 
-- [ ] Multi select
-- [ ] Archive
-- [ ] Compress
-- [ ] GIFs will GIF
+- [x] Multi select
+- [x] Archive
+- [x] Compress
+- [x] Encrypt
+- [x] GIFs will GIF (GIFs now GIF)
 - [ ] Convert
-- [ ] Sorting Currently sorts by date added
+- [ ] Sorting (Currently sorts by date added)
 
 Current supported image types:
 
 - [x] JPG/JPEG
 - [x] PNG
-- [ ] BMP
+- [x] BMP
 - [x] GIF
-- [ ] HEIC
-- [ ] RAW
-- [ ] TIFF
-- [ ] WEBP
-- [ ] SVG
-- [ ] AVIF
-- [ ] QOI
-- [ ] DNG
+- [x] HEIC
+- [x] TIFF
+- [x] WEBP
+- [x] AVIF
+- [x] QOI
+- [ ] RAW   No
+- [ ] SVG   Most Probably Not
+- [ ] JPEGXL   Someday... Maybe... Possibly...?
 
 
-- [ ] JPEGXL Someday... Maybe... Possibly...?
 
 ## App Demo Images
 

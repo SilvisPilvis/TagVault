@@ -1,2 +1,6 @@
 *.db
+icon.png
+icon.xcf
+img2bytes.*
+spinner.*
 /pyroscope
