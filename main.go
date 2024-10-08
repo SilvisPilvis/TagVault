@@ -566,15 +566,14 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 
 	// Show sidebar if hidden else show
 	if prevoiusImage == path && sidebarScroll.Visible() {
+		sidebar.RemoveAll()
 		sidebarScroll.Hide()
-		split.Trailing.Hide()
-		split.SetOffset(0.0)
-		w.Content().Refresh()
+		split.SetOffset(1)
 		//	split.Offset = 0.65 // was 0.7 by default
 	} else {
-		sidebarScroll.Show()
+
 		split.SetOffset(0.65)
-		// sidebarScroll.Offset.X = 0.65
+		sidebarScroll.Show()
 		prevoiusImage = path
 	}
 
