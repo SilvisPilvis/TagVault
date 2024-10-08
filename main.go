@@ -29,6 +29,7 @@ import (
 	// "main/pkg/fynecomponents/imgbtn"
 
 	"github.com/gen2brain/avif"
+	"github.com/gen2brain/svg"
 	"github.com/jdeng/goheif"
 	"github.com/xfmoulet/qoi"
 	"golang.org/x/image/bmp"
@@ -629,6 +630,8 @@ func loadImageResourceEfficient(path string) (fyne.Resource, error) {
 		img, err = qoi.Decode(file)
 	case ".tiff", ".tif":
 		img, err = tiff.Decode(file)
+	case ".svg":
+		img, err = svg.Decode(file)
 	default:
 		return nil, fmt.Errorf("unsupported image format")
 	}
@@ -678,6 +681,8 @@ func loadImageResourceEfficient(path string) (fyne.Resource, error) {
 		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
 	case ".tiff", ".tif":
 		// err = tiff.Encode(&buf, thumbImg, &tiff.Options{Compression: tiff.Deflate})
+		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
+	case ".svg":
 		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
 	}
 	if err != nil {
@@ -730,6 +735,8 @@ func loadImageResourceThumbnailEfficient(path string) (fyne.Resource, error) {
 		img, err = qoi.Decode(file)
 	case ".tiff", ".tif":
 		img, err = tiff.Decode(file)
+	case ".svg":
+		img, err = svg.Decode(file)
 	default:
 		return nil, fmt.Errorf("unsupported image format")
 	}
@@ -785,6 +792,9 @@ func loadImageResourceThumbnailEfficient(path string) (fyne.Resource, error) {
 		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
 	case ".tiff", ".tif":
 		// img, err = tiff.Decode(file)
+		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
+	case ".svg":
+		// img, err = svg.Decode(file)
 		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
 	default:
 		return nil, fmt.Errorf("unsupported image format")
