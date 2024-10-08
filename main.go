@@ -503,12 +503,14 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 				selectedFiles[path] = true
 				appLogger.Println("Added new file: ", path)
 				imgButton.image.Translucency = 0.7
+				imgButton.selected = true
 				canvas.Refresh(imgButton)
 				// If image is already selected and selectedFiles is 0 or bigger than 0
 			} else if len(selectedFiles) >= 0 && selectedFiles[path] {
 				appLogger.Println("Removed file: ", path)
 				delete(selectedFiles, path)
 				imgButton.image.Translucency = 0
+				imgButton.selected = false
 				canvas.Refresh(imgButton)
 			}
 			appLogger.Println("Selected files: ", selectedFiles)
@@ -578,8 +580,8 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	}
 
 	imageContainer.Refresh()
-	tagDisplay.Refresh()
-	sidebar.Refresh()
+	// tagDisplay.Refresh()
+	// sidebar.Refresh()
 }
 
 func truncateFilename(filename string, maxLength int) string {
