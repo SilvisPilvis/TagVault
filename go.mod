@@ -19,7 +19,9 @@ require (
 	fyne.io/systray v1.11.0 // indirect
 	fyne.io/x/fyne v0.0.0-20240803204126-8b5b5bfe65ef // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
+	github.com/ajstarks/svgo v0.0.0-20211024235047-1546f124cd8b // indirect
 	github.com/alexmullins/zip v0.0.0-20180717182244-4affb64b04d0 // indirect
+	github.com/chai2010/webp v1.1.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/ebitengine/purego v0.7.1 // indirect
@@ -46,6 +48,7 @@ require (
 	github.com/rymdport/portal v0.2.6 // indirect
 	github.com/srwiley/oksvg v0.0.0-20221011165216-be6e8873101c // indirect
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
+	github.com/strukturag/libheif v1.18.2 // indirect
 	github.com/tetratelabs/wazero v1.7.3 // indirect
 	github.com/xfmoulet/qoi v0.2.0 // indirect
 	github.com/yuin/goldmark v1.7.4 // indirect

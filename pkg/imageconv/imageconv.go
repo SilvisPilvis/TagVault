@@ -11,9 +11,13 @@ import (
 	"image/jpeg"
 	"image/png"
 
+	chaiWebp "github.com/chai2010/webp"
+
+	// svgo "github.com/ajstarks/svgo"
 	"github.com/gen2brain/avif"
 	"github.com/gen2brain/svg"
 	"github.com/jdeng/goheif"
+	strukHeif "github.com/strukturag/libheif/go/heif"
 	"github.com/xfmoulet/qoi"
 	"golang.org/x/image/bmp"
 	"golang.org/x/image/tiff"
@@ -27,7 +31,7 @@ var ImageTypes []string = []string{
 	"GIF",
 	"BMP",
 	"TIFF",
-	"SVG",
+	// "SVG",
 	"AVIF",
 	"HEIC",
 	"QOI",
@@ -96,21 +100,42 @@ func ConvertImage(selectedFiles map[string]bool, selectedFormat string, selected
 		case "JPG", "JPEG":
 			err = jpeg.Encode(res, img, &jpeg.Options{Quality: 85})
 		case "WEBP":
-			err = webp.Encode(res, img, &webp.Options{Quality: 85})
+			err = chaiWebp.Encode(res, img, &chaiWebp.Options{Quality: 85})
 		case "GIF":
 			err = gif.Encode(res, img, &gif.Options{})
 		case "BMP":
 			err = bmp.Encode(res, img)
 		case "TIFF", "TIF":
 			err = tiff.Encode(res, img, &tiff.Options{Compression: tiff.Deflate})
-		case "SVG":
-			err = svg.Encode(res, img)
+		// case "SVG":
+		// 	// err = svg.Encode(res, img)
+		// 	w := img.Bounds().Size().X
+		// 	h := img.Bounds().Size().Y
+
+		// 	canvas := svgo.New(res)
+		// 	canvas.Start(w, h)
+		// 	canvas.Rect(0, 0, w, h)
+
+		// 	for y := 0; y < h; y++ {
+		// 		for x := 0; x < w; x++ {
+		// 			r, g, b, a := img.At(x, y).RGBA()
+		// 			canvas.RGBA((x*100)+50, (y*100)+50, r, g, b, a)
+		// 			canvas.Writer
+		// 		}
+		// 	}
+
+		// 	canvas.End()
 		case "AVIF":
-			err = avif.Encode(res, img, &avif.Options{Quality: 85})
+			err = avif.Encode(res, img, avif.Options{Quality: 85})
 		case "HEIC":
-			err = goheif.Encode(res, img, &goheif.Options{Quality: 85})
+			// heif_ctx, _ := strukHeif.NewContext()
+			_, err = strukHeif.EncodeFromImage(img, strukHeif.Compression(strukHeif.CompressionHEVC), 85, strukHeif.LosslessModeEnabled, strukHeif.LoggingLevelBasic)
+			if err != nil {
+				return false, err
+			}
+			// strukHeif.NewImage()
 		case "QOI":
-			err := qoi.Encode(res, img)
+			err = qoi.Encode(res, img)
 		default:
 			return false, fmt.Errorf("Selected format not an image type")
 		}
