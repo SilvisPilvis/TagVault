@@ -44,10 +44,8 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/driver/desktop"
 
-	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	fyneGif "fyne.io/x/fyne/widget"
 )
 
 // type imageButton struct {
@@ -429,6 +427,7 @@ func createDisplayImagesFunctionFromDb(db *sql.DB, w fyne.Window, sidebar *fyne.
 
 				// display image
 				displayImage(db, w, path, imageContainer, sidebar, sidebarScroll, split, a)
+				// appLogger.Println("Img Container length: ", len(imageContainer.))
 			}(file)
 
 		}
@@ -450,23 +449,27 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 	// create a placeholder image
 	placeholderResource := fyne.NewStaticResource("placeholder", []byte{})
 
+	// if len(imageContainer.Objects) > 20 {
+	// 	// imageContainer.Remove(imageContainer.Objects[0])
+	// 	// imageContainer.RemoveAll()
+	// 	appLogger.Println("Too many images")
+	// }
+
 	if filepath.Ext(path) == ".gif" {
-		// appLogger.Println("Fix Gif Not Gifing...")
-
 		// imgButton, err := fyneGif.NewAnimatedGifFromResource(placeholderResource)
-		gifPath, err := storage.ParseURI("file://" + path)
-		if err != nil {
-			appLogger.Fatal("Failed to parse uri: ", err)
-		}
-		gifButton, err := fyneGif.NewAnimatedGif(gifPath)
-		if err != nil {
-			appLogger.Fatal("Failed to load gif: ", err)
-		}
-		// gifButton.Show()
-		// gifButton.Resize(fyne.NewSize(200, 200))
-		gifButton.Start()
+		//gifPath, err := storage.ParseURI("file://" + path)
+		//if err != nil {
+		//	appLogger.Fatal("Failed to parse uri: ", err)
+		//}
+		// gifButton, err := fyneGif.NewAnimatedGif(gifPath)
+		// if err != nil {
+		//	appLogger.Fatal("Failed to load gif: ", err)
+		//}
 
-		imageContainer.Add(container.NewPadded(gifButton))
+		// gifButton.Start()
+
+		// imageContainer.Add(container.NewPadded(gifButton))
+		appLogger.Println("Skipping GIF")
 	} else {
 		imgButton := newImageButton(placeholderResource)
 
@@ -525,7 +528,8 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 		imageTile := container.NewVBox(container.NewPadded(imgButton))
 		imageContainer.Add(imageTile)
 	}
-
+	// appLogger.Println(imageContainer.Objects)
+	appLogger.Println("Showing ", len(imageContainer.Objects), " images")
 }
 
 // UNDER NO CIRCUMSTANCES CHANGE THE ORDER IN displayImage func OR THERE WILL BE ERRORS WHEN FYNE IS LOADING IMAGES
@@ -573,7 +577,6 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 		split.SetOffset(1)
 		//	split.Offset = 0.65 // was 0.7 by default
 	} else {
-
 		split.SetOffset(0.65)
 		sidebarScroll.Show()
 		prevoiusImage = path

@@ -1,9 +1,6 @@
 package utilwindows
 
 import (
-
-	// "archive/zip"
-
 	"database/sql"
 	"fmt"
 	"image/color"
@@ -174,20 +171,8 @@ func ShowAllTagWindow(a fyne.App, parent fyne.Window, db *sql.DB, opts *options.
 		return
 	}
 
-	// for i := 1; i <= len(tags); i++ {
-	// 	content.Add(
-	// 		container.NewHBox(
-	// 			widget.NewLabel(tags[i]),
-	// 			widget.NewButtonWithIcon("Edit", theme.DocumentCreateIcon(), func() {
-	// 				tagwindow.ShowCreateTagWindow(a, parent, db, opts, true, tags[i], i)
-	// 				// ShowEditTagWindow(a, parent, db, i, scroll) // replace this with create tag window but update statement
-	// 			}),
-	// 		),
-	// 	)
-	// }
-
 	for k, v := range tags {
-		fmt.Println("Tag Key value: ", k, " ", v)
+		// fmt.Println("Tag Key value: ", k, " ", v)
 		content.Add(
 			container.NewHBox(
 				widget.NewLabel(v),
@@ -405,13 +390,32 @@ func ShowRightClickMenu(w fyne.Window, fileList map[string]bool, a fyne.App) {
 		showPasswordWindow(a, formattedDate, listedFiles, w)
 	})
 
+	convertButton := widget.NewButton("Convert Files", func() {
+		showChooseConvertDir(a, w)
+	})
+
 	content := container.NewVBox(
+		convertButton,
 		gzipButton,
 		bzip2Button,
 		zipButton,
 		encryptedButton,
 	)
 	dialog.ShowCustom("File Actions", "Close", content, w)
+}
+
+func showChooseConvertDir(a fyne.App, w fyne.Window) {
+	home, _ := os.UserHomeDir()
+	dialog.ShowFolderOpen(func(uri fyne.ListableURI, err error) {
+		if err == nil {
+			path := uri.Path()
+			if uri.Scheme() == "file" {
+				convertedPath := filepath.Join(home, "Desktop", path)
+				convertedPath = filepath.Clean(convertedPath)
+				fmt.Println("Converted Path: ", convertedPath)
+			}
+		}
+	}, w)
 }
 
 func showPasswordWindow(a fyne.App, fmtDate string, fileList []string, tagVaultWindow fyne.Window) {
@@ -438,12 +442,10 @@ func showChooseArchiveType(w fyne.Window, formattedDate string, fileList []strin
 	bzip2Button := widget.NewButton("Bzip2 Archive", func() {
 		archivePath := filepath.Join(home, "Desktop", formattedDate+".tar.bz2")
 		archives.CreateEncryptedTarBzip2Archive(archivePath, fileList, w)
-
 	})
 	zipButton := widget.NewButton("Zip Archive", func() {
 		archivePath := filepath.Join(home, "Desktop", formattedDate+".zip")
 		archives.CreateEncryptedZipArchive(archivePath, fileList, w)
-
 	})
 
 	content := container.NewVBox(

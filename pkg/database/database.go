@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"main/pkg/fileutils"
+	"main/pkg/imageconv"
 	"main/pkg/logger"
 	"main/pkg/options"
 	"os"
@@ -38,7 +39,7 @@ func Init() *sql.DB {
 func setupTables(db *sql.DB) {
 	tables := []string{
 		"CREATE TABLE IF NOT EXISTS `Tag`(`id` INTEGER PRIMARY KEY NOT NULL, `name` VARCHAR(255) NOT NULL UNIQUE, `color` VARCHAR(7) NOT NULL);",
-		"CREATE TABLE IF NOT EXISTS `File`(`id` INTEGER PRIMARY KEY NOT NULL, `path` VARCHAR(1024) NOT NULL UNIQUE, `dateAdded` DATETIME NOT NULL);",
+		"CREATE TABLE IF NOT EXISTS `File`(`id` INTEGER PRIMARY KEY NOT NULL, `path` VARCHAR(1024) NOT NULL UNIQUE, `md5` VARCHAR(32) NOT NULL UNIQUE, `dateAdded` DATETIME NOT NULL);",
 		"CREATE INDEX IF NOT EXISTS idx_image_path ON File(path);", // Creates index on File.path to make searching by path faster
 		"CREATE TABLE IF NOT EXISTS `FileTag`(`id` INTEGER PRIMARY KEY NOT NULL, `fileId` INTEGER NOT NULL, `tagId` INTEGER NOT NULL);",
 		"CREATE TABLE IF NOT EXISTS `Options`(`id` INTEGER PRIMARY KEY NOT NULL, `DatabasePath` VARCHAR(255) NOT NULL, `ExcludedDirs` VARCHAR(255) NOT NULL, `Timezone` VARCHAR(1024) NOT NULL, `SortDesc` BOOLEAN DEFAULT true, `UseRGB` BOOLEAN DEFAULT false, `ImageNumber` INTEGER NOT NULL DEFAULT 20, `ThumbnailSize` INTEGER NOT NULL DEFAULT 256, `Profiling` BOOLEAN DEFAULT false, `ExifFields` VARCHAR(255), `FirstBoot` BOOLEAN DEFAULT false);",
@@ -49,6 +50,29 @@ func setupTables(db *sql.DB) {
 			appLogger.Fatal("Failed to create table: ", err)
 		}
 	}
+}
+
+func AddImageTypeTags(db *sql.DB) error {
+	stmt, err := db.Prepare(`
+    INSERT INTO Tag (name, color)
+    SELECT ?, ?
+    WHERE NOT EXISTS (
+        SELECT 1 FROM Tag WHERE name = ?
+    )
+	`)
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < len(imageconv.ImageTypes); i++ {
+		_, err = stmt.Exec(imageconv.ImageTypes[i], "#373c40", imageconv.ImageTypes[i])
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = stmt.Exec("GIF", "#373c40", "GIF")
+	return nil
 }
 
 func GetImageCount(db *sql.DB) int {
@@ -209,12 +233,15 @@ func DiscoverImages(db *sql.DB, blacklist map[string]int) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	appLogger.Println("Created timeout context")
-	stmt, err := db.PrepareContext(ctx, "INSERT INTO File (path, dateAdded) SELECT ?, DATETIME('now') WHERE NOT EXISTS (SELECT 1 FROM File WHERE path = ?)")
+	stmt, err := db.PrepareContext(ctx, `
+    INSERT INTO File (path, dateAdded, md5) 
+    SELECT ?, DATETIME('now'), ? 
+    WHERE NOT EXISTS (SELECT 1 FROM File WHERE path = ?)
+	`)
 	if err != nil {
 		return false, fmt.Errorf("error preparing SQL statement: %w", err)
 	}
 	defer stmt.Close()
-	appLogger.Println("Prepared successfully")
 
 	for _, directory := range directories {
 		err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
@@ -244,20 +271,30 @@ func DiscoverImages(db *sql.DB, blacklist map[string]int) (bool, error) {
 				return filepath.SkipDir
 			}
 			if fileutils.IsImageFileMap(path) {
-				insertId, err := stmt.Exec(path, path)
+				// this needs to hash the whole image content not path
+				imageHash, err := fileutils.GetFileMD5HashBuffered(path)
 				if err != nil {
-					return fmt.Errorf("error inserting image path into database: %w", err)
+					return fmt.Errorf("error hashing image: %w", err)
+				}
+
+				// inserts image path into database
+				insertId, err := stmt.Exec(path, imageHash, path)
+				if err != nil {
+					// appLogger.Println("Failed to insert image into database: ", err)
+					return fmt.Errorf("failed to insert image into database: %w", err)
 				}
 				lastId, _ := insertId.LastInsertId()
 
-				extension := filepath.Ext(path)
-				extension = strings.TrimPrefix(extension, ".")
+				extension := filepath.Ext(path)[1:]
+				// extension = strings.TrimPrefix(extension, ".") // replace with slice 1 from front instead
 				extension = strings.ToUpper(extension)
+
+				// appLogger.Println("Image Hash Len: ", len(imageHash))
 				var extensionId int
 
 				db.QueryRow("SELECT id FROM Tag WHERE name = ?", extension).Scan(&extensionId)
 
-				db.Exec("INSERT INTO FileTag (fileId, tagId) VALUES (?, ?)", lastId, extensionId)
+				db.Exec("INSERT INTO FileTag (fileId, tagId) VALUES (?, ?)", lastId, extensionId, imageHash)
 
 				count++
 			}
@@ -269,7 +306,7 @@ func DiscoverImages(db *sql.DB, blacklist map[string]int) (bool, error) {
 		}
 	}
 
-	appLogger.Println("Discovery Complete. Added or Discovered ", count, " new files.")
+	appLogger.Println("DISCOVERY COMPLETE. Added or Discovered ", count, " new files.")
 
 	return true, nil
 }

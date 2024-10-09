@@ -44,8 +44,6 @@ Current supported image types:
 - [ ] SVG   Most Probably Not
 - [ ] JPEGXL   Someday... Maybe... Possibly...?
 
-
-
 ## App Demo Images
 
 ### Default app state
