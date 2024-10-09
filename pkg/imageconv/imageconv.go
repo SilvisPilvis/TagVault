@@ -37,18 +37,21 @@ var ImageTypes []string = []string{
 	"QOI",
 }
 
-var home, _ = os.UserHomeDir()
+// var home, _ = os.UserHomeDir()
 
-func ConvertImage(selectedFiles map[string]bool, selectedFormat string, selectedDir string) (bool, error) {
+func ConvertImage(selectedFiles []string, selectedFormat string, selectedDir string) (bool, error) {
 	// stores the converted image bytes
 	// var resImages map[string]image.Image
+	selectedDir = filepath.Clean(selectedDir) + "/"
+	fmt.Println("Selected Dir Filepath Clean: ", selectedDir)
 
 	// loops through selected files and decodes them
-	for key, _ := range selectedFiles {
+	for key := range selectedFiles {
 		// gets the file extension
-		ext := filepath.Ext(key)
+		ext := filepath.Ext(selectedFiles[key])
 		// open the image file
-		file, err := os.Open(key)
+		fmt.Println("Selected File: ", selectedFiles[key])
+		file, err := os.Open(selectedFiles[key])
 		if err != nil {
 			// return error if failed to open file
 			// should be changed to not crash the func
@@ -63,50 +66,121 @@ func ConvertImage(selectedFiles map[string]bool, selectedFormat string, selected
 		switch ext {
 		case ".jpg", ".jpeg":
 			img, _, err = image.Decode(file)
+			if err != nil {
+				return false, err
+			}
 		case ".png":
 			img, _, err = image.Decode(file)
+			if err != nil {
+				return false, err
+			}
 		case ".gif":
 			img, _, err = image.Decode(file)
+			if err != nil {
+				return false, err
+			}
 		case ".bmp":
 			img, err = bmp.Decode(file)
+			if err != nil {
+				return false, err
+			}
 		case ".tiff", ".tif":
 			img, err = tiff.Decode(file)
+			if err != nil {
+				return false, err
+			}
 		case ".webp":
 			img, err = webp.Decode(file)
+			if err != nil {
+				return false, err
+			}
 		case ".svg":
 			img, err = svg.Decode(file)
+			if err != nil {
+				return false, err
+			}
 		case ".avif":
 			img, err = avif.Decode(file)
+			if err != nil {
+				return false, err
+			}
 		case ".heif", ".heic":
 			img, err = goheif.Decode(file)
+			if err != nil {
+				return false, err
+			}
 		case ".qoi":
 			img, err = qoi.Decode(file)
+			if err != nil {
+				return false, err
+			}
 		default:
-			return false, fmt.Errorf("Selected file not an image")
+			return false, fmt.Errorf("selected file not an image")
 		}
 
 		// switch on the selected format
 		// encode the image
 		// save bytes to array
-		imageName := filepath.Base(key)
+		imageName := filepath.Base(selectedFiles[key])
+		// fmt.Println("Filepath Base: ", imageName)
 		imageName = imageName[:len(imageName)-len(filepath.Ext(imageName))]
+		// fmt.Println("No Extension: ", imageName)
 		imageName += "." + strings.ToLower(selectedFormat)
-		res, err := os.Create(selectedDir + "/" + imageName)
+		// fmt.Println("New Extension: ", imageName)
+		fmt.Println("Selected Dir Before Create: ", selectedDir)
+		res, err := os.Create(selectedDir + imageName)
+		// res = os.NewFile(res.Fd(), res.Name())
+		if err != nil {
+			fmt.Println("Failed to create converted file: ", err)
+			return false, err
+		}
+		defer res.Close()
+
+		resFile, err := os.Open(selectedDir + "/" + imageName)
+		if err != nil {
+			fmt.Println("Failed to open converted file: ", err)
+			return false, err
+		}
+		defer resFile.Close()
 
 		switch selectedFormat {
 		case "PNG":
 			err = png.Encode(res, img)
+			if err != nil {
+				return false, err
+			}
+			fmt.Println("File Converted: ", res.Name())
 			// resImages[key] = res
 		case "JPG", "JPEG":
 			err = jpeg.Encode(res, img, &jpeg.Options{Quality: 85})
+			if err != nil {
+				return false, err
+			}
+			fmt.Println("File Converted: ", res.Name())
 		case "WEBP":
 			err = chaiWebp.Encode(res, img, &chaiWebp.Options{Quality: 85})
+			if err != nil {
+				return false, err
+			}
+			fmt.Println("File Converted: ", res.Name())
 		case "GIF":
 			err = gif.Encode(res, img, &gif.Options{})
+			if err != nil {
+				return false, err
+			}
+			fmt.Println("File Converted: ", res.Name())
 		case "BMP":
 			err = bmp.Encode(res, img)
+			if err != nil {
+				return false, err
+			}
+			fmt.Println("File Converted: ", res.Name())
 		case "TIFF", "TIF":
 			err = tiff.Encode(res, img, &tiff.Options{Compression: tiff.Deflate})
+			if err != nil {
+				return false, err
+			}
+			fmt.Println("File Converted: ", res.Name())
 		// case "SVG":
 		// 	// err = svg.Encode(res, img)
 		// 	w := img.Bounds().Size().X
@@ -126,18 +200,27 @@ func ConvertImage(selectedFiles map[string]bool, selectedFormat string, selected
 
 		// 	canvas.End()
 		case "AVIF":
-			err = avif.Encode(res, img, avif.Options{Quality: 85})
+			err = avif.Encode(res, img, avif.Options{Quality: 85, QualityAlpha: 85})
+			if err != nil {
+				return false, err
+			}
+			fmt.Println("File Converted: ", res.Name())
 		case "HEIC":
 			// heif_ctx, _ := strukHeif.NewContext()
 			_, err = strukHeif.EncodeFromImage(img, strukHeif.Compression(strukHeif.CompressionHEVC), 85, strukHeif.LosslessModeEnabled, strukHeif.LoggingLevelBasic)
 			if err != nil {
 				return false, err
 			}
+			fmt.Println("File Converted: ", res.Name())
 			// strukHeif.NewImage()
 		case "QOI":
 			err = qoi.Encode(res, img)
+			if err != nil {
+				return false, err
+			}
+			fmt.Println("File Converted: ", res.Name())
 		default:
-			return false, fmt.Errorf("Selected format not an image type")
+			return false, fmt.Errorf("selected format not an image type")
 		}
 
 		// loop through resImages array and batch write images to disk
@@ -155,7 +238,7 @@ func ConvertImage(selectedFiles map[string]bool, selectedFormat string, selected
 		// 		return false, err
 		// 	}
 		// }
-		return true, nil
+		// return true, nil
 	}
 
 	return true, nil

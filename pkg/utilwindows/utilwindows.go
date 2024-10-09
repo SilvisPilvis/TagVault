@@ -9,6 +9,7 @@ import (
 	"main/pkg/archives"
 	"main/pkg/colorutils"
 	"main/pkg/database"
+	"main/pkg/imageconv"
 	"main/pkg/options"
 	"main/pkg/tagwindow"
 	"os"
@@ -391,7 +392,7 @@ func ShowRightClickMenu(w fyne.Window, fileList map[string]bool, a fyne.App) {
 	})
 
 	convertButton := widget.NewButton("Convert Files", func() {
-		showChooseConvertDir(a, w)
+		showChooseConvertDir(a, w, listedFiles)
 	})
 
 	content := container.NewVBox(
@@ -404,18 +405,45 @@ func ShowRightClickMenu(w fyne.Window, fileList map[string]bool, a fyne.App) {
 	dialog.ShowCustom("File Actions", "Close", content, w)
 }
 
-func showChooseConvertDir(a fyne.App, w fyne.Window) {
-	home, _ := os.UserHomeDir()
+func showChooseConvertDir(a fyne.App, w fyne.Window, fileList []string) {
+	// home, _ := os.UserHomeDir()
 	dialog.ShowFolderOpen(func(uri fyne.ListableURI, err error) {
 		if err == nil {
 			path := uri.Path()
 			if uri.Scheme() == "file" {
-				convertedPath := filepath.Join(home, "Desktop", path)
-				convertedPath = filepath.Clean(convertedPath)
-				fmt.Println("Converted Path: ", convertedPath)
+				convertedPath := filepath.Clean(path)
+				showChooseConvertType(a, w, fileList, convertedPath)
 			}
 		}
 	}, w)
+}
+
+func showChooseConvertType(a fyne.App, w fyne.Window, fileList []string, resPath string) {
+	convertWindow := a.NewWindow("Choose File Type")
+	convertWindow.SetTitle("Choose File Type")
+	convertWindow.Resize(fyne.NewSize(300, 100))
+
+	content := container.NewVBox()
+	// var resType string
+
+	for _, file := range imageconv.ImageTypes {
+		button := widget.NewButton(file, func() {
+			// resType = file
+			_, err := imageconv.ConvertImage(fileList, file, resPath)
+			if err != nil {
+				dialog.ShowError(err, w)
+				convertWindow.Close()
+				return
+			}
+			dialog.ShowInformation("Success", fmt.Sprintf("Converted to %s successfully", file), w)
+			convertWindow.Close()
+		})
+		content.Add(button)
+	}
+
+	convertWindow.SetContent(content)
+
+	convertWindow.Show()
 }
 
 func showPasswordWindow(a fyne.App, fmtDate string, fileList []string, tagVaultWindow fyne.Window) {
