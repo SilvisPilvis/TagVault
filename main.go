@@ -43,53 +43,15 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/driver/desktop"
-
+	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
+	fyneGif "fyne.io/x/fyne/widget"
+
+	// fyneGif "fyne.io/x/fyne/widget"
+	// "fyne.io/fyne/v2/storage"
+
 	"fyne.io/fyne/v2/widget"
 )
-
-// type imageButton struct {
-// 	widget.BaseWidget
-// 	image        *canvas.Image
-// 	onTapped     func()
-// 	onLongTap    func()
-// 	onRightClick func()
-// }
-
-// func newImageButton(resource fyne.Resource, tapped func(), longTap func(), rightClick func()) *imageButton {
-// 	img := &imageButton{
-// 		onTapped:     tapped,
-// 		onLongTap:    longTap,
-// 		onRightClick: rightClick,
-// 	}
-// 	img.ExtendBaseWidget(img)
-// 	img.image = canvas.NewImageFromResource(resource)
-// 	img.image.FillMode = canvas.ImageFillContain
-// 	img.image.SetMinSize(fyne.NewSize(150, 150))
-// 	return img
-// }
-
-// func (b *imageButton) Tapped(_ *fyne.PointEvent) {
-// 	if b.onTapped != nil {
-// 		b.onTapped()
-// 	}
-// }
-
-// func (b *imageButton) TappedSecondary(_ *fyne.PointEvent) {
-// 	if b.onRightClick != nil {
-// 		b.onRightClick()
-// 	}
-// }
-
-// func (b *imageButton) LongTap(_ *fyne.PointEvent) {
-// 	if b.onLongTap != nil {
-// 		b.onLongTap()
-// 	}
-// }
-
-// func (b *imageButton) CreateRenderer() fyne.WidgetRenderer {
-// 	return widget.NewSimpleRenderer(b.image)
-// }
 
 type imageButton struct {
 	widget.BaseWidget
@@ -240,23 +202,110 @@ func main() {
 
 	wg.Wait()
 
+	// content := container.NewVBox()
+	// scroll := container.NewVScroll(content)
+	// sidebar := container.NewVBox()
+	// sidebarScroll := container.NewVScroll(sidebar)
+	// sidebarScroll.Hide()
+	// split := container.NewHSplit(scroll, sidebarScroll)
+	// split.Offset = 1 // Start with sidebar hidden
+	// content.RemoveAll()
+	// input := widget.NewEntry()
+	// input.SetPlaceHolder("Enter a Tag to Search by")
+	// form := widget.NewEntry()
+	// form.SetPlaceHolder("Enter a Tag to Search by")
+
+	// tabs := container.NewAppTabs(
+	// 	container.NewTabItem("Images", content),
+	// )
+	// tabs.SetTabLocation(container.TabLocationTop)
+
+	// form.OnChanged = func(s string) {
+	// 	imagePaths, err := database.GetImagePathsByTag(db, "%"+s+"%")
+	// 	if err != nil {
+	// 		fmt.Print("searchImagesByTag")
+	// 		dialog.ShowError(err, w)
+	// 		return
+	// 	}
+	// 	updateContentWithSearchResults(content, imagePaths, db, w, sidebar, sidebarScroll, split, a)
+	// }
+
+	// settingsButton := widget.NewButtonWithIcon("", theme.SettingsIcon(), func() {
+	// 	utilwindows.ShowSettingsWindow(a, w, db, appOptions)
+	// })
+
+	// // settingsButton.Icon = theme.SettingsIcon()
+	// loadFilterButton := fyne.NewStaticResource("filterIcon", icon.FilterIconLight)
+	// filterButton := widget.NewButton("", func() {
+	// 	// sidebarScroll.Show()
+	// 	return
+	// })
+	// filterButton.Icon = loadFilterButton
+
+	// optContainer := container.NewGridWithColumns(2, filterButton, settingsButton)
+
+	// controls := container.NewBorder(nil, nil, nil, optContainer, form)
+
+	// // test := container.NewAdaptiveGrid(2, tabs, controls)
+
+	// mainContainer := container.NewBorder(controls, nil, nil, nil, container.NewPadded(split))
+	// // mainContainer := container.NewBorder(test, nil, nil, nil, container.NewPadded(split))
+	// // mainContainer.Add(tabs)
+
+	// appLogger.Printf("Page: %d, ImageNumber: %d", page, appOptions.ImageNumber)
+
+	// if appOptions.FirstBoot {
+	// 	appLogger.Println("This is first boot")
+
+	// 	displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, content)
+	// 	displayImages(home + "/Pictures")
+	// } else {
+	// 	dbImages, err := database.GetImagesFromDatabase(db, page, appOptions.ImageNumber)
+	// 	if err != nil {
+	// 		appLogger.Fatal(err)
+	// 	}
+	// 	displayImages := createDisplayImagesFunctionFromDb(db, w, sidebar, sidebarScroll, split, a, content, dbImages)
+	// 	displayImages("")
+	// }
+
+	// // Add event listener to scroll
+	// scroll.OnScrolled = func(pos fyne.Position) {
+	// 	// stupid magic number
+	// 	// why does it increment by 648 when adding the same amound of images with the offset at 100?
+	// 	if scroll.Offset.Y == 100+(float32(page)*648) && !appOptions.FirstBoot {
+	// 		page += 1
+	// 		appLogger.Println("Scrolled to bottom. Current page: ", page)
+	// 		appLogger.Println("Skip images: ", page*int(appOptions.ImageNumber))
+	// 		nextImages, err := database.GetImagesFromDatabase(db, page*int(appOptions.ImageNumber), appOptions.ImageNumber)
+	// 		if err != nil {
+	// 			appLogger.Fatal("Failed to load more images on scroll: ", err)
+	// 		}
+	// 		displayImages := createDisplayImagesFunctionFromDb(db, w, sidebar, sidebarScroll, split, a, content, nextImages)
+	// 		displayImages("")
+	// 		content.Refresh()
+	// 	}
+	// }
+
+	// appLogger.Println("Remember to delete fyne folder from .config/fyne folder")
+
+	// ---------- CLAUDE LAYOUT START
+
 	content := container.NewVBox()
 	scroll := container.NewVScroll(content)
-
 	sidebar := container.NewVBox()
 	sidebarScroll := container.NewVScroll(sidebar)
 	sidebarScroll.Hide()
-
 	split := container.NewHSplit(scroll, sidebarScroll)
 	split.Offset = 1 // Start with sidebar hidden
-
 	content.RemoveAll()
 
 	input := widget.NewEntry()
 	input.SetPlaceHolder("Enter a Tag to Search by")
-
 	form := widget.NewEntry()
 	form.SetPlaceHolder("Enter a Tag to Search by")
+
+	imageContent := content
+
 	form.OnChanged = func(s string) {
 		imagePaths, err := database.GetImagePathsByTag(db, "%"+s+"%")
 		if err != nil {
@@ -264,63 +313,62 @@ func main() {
 			dialog.ShowError(err, w)
 			return
 		}
-		updateContentWithSearchResults(content, imagePaths, db, w, sidebar, sidebarScroll, split, a)
+		updateContentWithSearchResults(imageContent, imagePaths, db, w, sidebar, sidebarScroll, split, a)
+		// updateContentWithSearchResults(imageContent, imagePaths, db, w, sidebar, sidebarScroll, split, a)
 	}
 
 	settingsButton := widget.NewButtonWithIcon("", theme.SettingsIcon(), func() {
 		utilwindows.ShowSettingsWindow(a, w, db, appOptions)
 	})
-	// settingsButton.Icon = theme.SettingsIcon()
 
 	loadFilterButton := fyne.NewStaticResource("filterIcon", icon.FilterIconLight)
-
 	filterButton := widget.NewButton("", func() {
-		// sidebarScroll.Show()
 		return
 	})
 	filterButton.Icon = loadFilterButton
 
-	optContainer := container.NewAdaptiveGrid(2, filterButton, settingsButton)
+	optContainer := container.NewGridWithColumns(2, filterButton, settingsButton)
+	controls := container.NewBorder(nil, nil, nil, optContainer, form)
 
+	// Create main container with tabs above controls
+	mainContainer := container.NewBorder(
+		controls,
+		nil,
+		nil,
+		nil,
+		container.NewPadded(split),
+	)
+
+	appLogger.Println("Test Tabs: ", mainContainer.Objects)
+
+	mainTab := container.NewTabItem("Images", mainContainer)
+	testTab := container.NewTabItem("Test", container.NewVBox())
 	tabs := container.NewAppTabs(
-		container.NewTabItem("Images", content),
-		// widget.NewButtonWithIcon("Open new Tab", "Plus", func() {
-		// 	tabs.Append(container.NewTabItem("Images", content))
-		// }),
+		// displays image scroll content in this tab
+		mainTab,
+		testTab,
+		// Add more tabs as needed
+		// container.NewTabItem("Other Tab", otherContent),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
 
-	controls := container.NewBorder(nil, nil, nil, optContainer, form)
-
-	mainContainer := container.NewBorder(controls, nil, nil, nil, container.NewPadded(split))
-	// mainContainer.Add(tabs)
-
 	appLogger.Printf("Page: %d, ImageNumber: %d", page, appOptions.ImageNumber)
-
-	// appLogger.Println("ExcludedDirs: ", appOptions.ExcludedDirs)
-	// appLogger.Println("Current Binary Directory: ", filepath.Dir(os.Args[0]))
-	// appLogger.Println("Current Binary Directory: ", cwd)
-
 	if appOptions.FirstBoot {
 		appLogger.Println("This is first boot")
-		homeDir, _ := os.UserHomeDir()
-		displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, content)
-		displayImages(homeDir + "/Pictures")
-		// displayImages(homeDir + "/Pictures/wallpapers")
+		displayImages := createDisplayImagesFunction(db, w, sidebar, sidebarScroll, split, a, imageContent)
+		displayImages(home + "/Pictures")
 	} else {
 		dbImages, err := database.GetImagesFromDatabase(db, page, appOptions.ImageNumber)
 		if err != nil {
 			appLogger.Fatal(err)
 		}
-		displayImages := createDisplayImagesFunctionFromDb(db, w, sidebar, sidebarScroll, split, a, content, dbImages)
+		displayImages := createDisplayImagesFunctionFromDb(db, w, sidebar, sidebarScroll, split, a, imageContent, dbImages)
 		displayImages("")
 	}
 
-	// Add event listener to scroll
 	scroll.OnScrolled = func(pos fyne.Position) {
-		// stupid magic number
-		// why does it increment by 648 when adding the same amound of images with the offset at 100?
-		if scroll.Offset.Y == 100+(float32(page)*648) && !appOptions.FirstBoot {
+		// appLogger.Println("Scrolled: ", pos.Y)
+		if scroll.Offset.Y == 140+(float32(page)*648) && !appOptions.FirstBoot {
 			page += 1
 			appLogger.Println("Scrolled to bottom. Current page: ", page)
 			appLogger.Println("Skip images: ", page*int(appOptions.ImageNumber))
@@ -328,17 +376,17 @@ func main() {
 			if err != nil {
 				appLogger.Fatal("Failed to load more images on scroll: ", err)
 			}
-
-			displayImages := createDisplayImagesFunctionFromDb(db, w, sidebar, sidebarScroll, split, a, content, nextImages)
+			displayImages := createDisplayImagesFunctionFromDb(db, w, sidebar, sidebarScroll, split, a, imageContent, nextImages)
 			displayImages("")
-			content.Refresh()
+			imageContent.Refresh()
 		}
 	}
 
-	appLogger.Println("Remember to delete fyne folder from `.config/fyne` folder")
+	// ---------- CLAUDE LAYOUT END
 
-	// mainContainer.Add(tabs)
-	w.SetContent(mainContainer)
+	appLogger.Println("Remember to delete fyne folder from `.config/fyne` folder")
+	// w.SetContent(mainContainer)
+	w.SetContent(tabs)
 	w.ShowAndRun()
 }
 
@@ -458,6 +506,9 @@ func createDisplayImagesFunctionFromDb(db *sql.DB, w fyne.Window, sidebar *fyne.
 func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.Container, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App) {
 	// create a placeholder image
 	placeholderResource := fyne.NewStaticResource("placeholder", []byte{})
+	// imageContainer.Resize(w.Canvas().Size())
+	// sidebar.Resize(imageContainer.Size())
+	// appLogger.Println("Size Test: ", imageContainer.Size().Height)
 
 	// if len(imageContainer.Objects) > 20 {
 	// 	// imageContainer.Remove(imageContainer.Objects[0])
@@ -467,18 +518,18 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 
 	if filepath.Ext(path) == ".gif" {
 		// imgButton, err := fyneGif.NewAnimatedGifFromResource(placeholderResource)
-		//gifPath, err := storage.ParseURI("file://" + path)
-		//if err != nil {
-		//	appLogger.Fatal("Failed to parse uri: ", err)
-		//}
-		// gifButton, err := fyneGif.NewAnimatedGif(gifPath)
-		// if err != nil {
-		//	appLogger.Fatal("Failed to load gif: ", err)
-		//}
+		gifPath, err := storage.ParseURI("file://" + path)
+		if err != nil {
+			appLogger.Fatal("Failed to parse uri: ", err)
+		}
+		gifButton, err := fyneGif.NewAnimatedGif(gifPath)
+		if err != nil {
+			appLogger.Fatal("Failed to load gif: ", err)
+		}
 
-		// gifButton.Start()
+		gifButton.Start()
 
-		// imageContainer.Add(container.NewPadded(gifButton))
+		imageContainer.Add(container.NewPadded(gifButton))
 		appLogger.Println("Skipping GIF")
 	} else {
 		imgButton := newImageButton(placeholderResource)
@@ -538,8 +589,8 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 		imageTile := container.NewVBox(container.NewPadded(imgButton))
 		imageContainer.Add(imageTile)
 	}
-	// appLogger.Println(imageContainer.Objects)
 	appLogger.Println("Showing ", len(imageContainer.Objects), " images")
+	// appLogger.Println("Image Container size: ", imageContainer.Size())
 }
 
 // UNDER NO CIRCUMSTANCES CHANGE THE ORDER IN displayImage func OR THERE WILL BE ERRORS WHEN FYNE IS LOADING IMAGES
