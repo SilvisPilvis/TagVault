@@ -43,6 +43,7 @@ func setupTables(db *sql.DB) {
 		"CREATE INDEX IF NOT EXISTS idx_image_path ON File(path);", // Creates index on File.path to make searching by path faster
 		"CREATE TABLE IF NOT EXISTS `FileTag`(`id` INTEGER PRIMARY KEY NOT NULL, `fileId` INTEGER NOT NULL, `tagId` INTEGER NOT NULL);",
 		"CREATE TABLE IF NOT EXISTS `Options`(`id` INTEGER PRIMARY KEY NOT NULL, `DatabasePath` VARCHAR(255) NOT NULL, `ExcludedDirs` VARCHAR(255) NOT NULL, `Timezone` VARCHAR(1024) NOT NULL, `SortDesc` BOOLEAN DEFAULT true, `UseRGB` BOOLEAN DEFAULT false, `ImageNumber` INTEGER NOT NULL DEFAULT 20, `ThumbnailSize` INTEGER NOT NULL DEFAULT 256, `Profiling` BOOLEAN DEFAULT false, `ExifFields` VARCHAR(255), `FirstBoot` BOOLEAN DEFAULT false);",
+		"PRAGMA journal_mode=WAL;",
 		// "INSERT INTO `Tag` (`name`, `color`) VALUES ('GIF', '#000000'), ('JPG', '#000000'), ('PNG', '#000000'), ('AVIF', '#000000'), ('WEBP', '#000000'), ('BMP', '#000000'), ('HEIC', '#000000'), ('TIFF', '#000000'), ('TIF', '#000000'), ('QOI', '#000000');",
 	}
 	for _, table := range tables {
@@ -50,6 +51,16 @@ func setupTables(db *sql.DB) {
 			appLogger.Fatal("Failed to create table: ", err)
 		}
 	}
+}
+
+func VacuumDb(db *sql.DB) error {
+	_, err := db.Exec("VACUUM")
+	if err != nil {
+		appLogger.Println("Failed to vacuum database: ", err)
+		return err
+	}
+
+	return nil
 }
 
 func AddImageTypeTags(db *sql.DB) error {
@@ -71,7 +82,7 @@ func AddImageTypeTags(db *sql.DB) error {
 		}
 	}
 
-	_, err = stmt.Exec("GIF", "#373c40", "GIF")
+	// _, err = stmt.Exec("GIF", "#373c40", "GIF")
 	return nil
 }
 

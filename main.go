@@ -187,6 +187,7 @@ func main() {
 	a := app.NewWithID("TagVault")
 	w := setupMainWindow(a)
 
+	// If no options exist, this means that this is first boot
 	optionsExist, err := options.CheckOptionsExists(db)
 	if err != nil {
 		appLogger.Println(err)
@@ -202,6 +203,7 @@ func main() {
 		if err != nil {
 			appLogger.Fatalln("Failed to save Options: ", err)
 		}
+		database.AddImageTypeTags(db)
 	} else {
 		appLogger.Println("Loading options")
 		appOptions, err = options.LoadOptionsFromDB(db)
@@ -209,6 +211,11 @@ func main() {
 			appLogger.Println("Error loading options: ", err)
 		}
 		appLogger.Println(appOptions.ExcludedDirs)
+		err = database.VacuumDb(db)
+		if err != nil {
+			appLogger.Println("Failed to vacuum database: ", err)
+		}
+		appLogger.Println("VACUUM Executed Successfully")
 		// appOptions.ExcludedDirs = map[string]int{"Games": 1, "games": 1, "go": 1, "TagVault": 1}
 	}
 
@@ -265,7 +272,7 @@ func main() {
 	})
 	// settingsButton.Icon = theme.SettingsIcon()
 
-	loadFilterButton := fyne.NewStaticResource("filterIcon", icon.FilterIconDark)
+	loadFilterButton := fyne.NewStaticResource("filterIcon", icon.FilterIconLight)
 
 	filterButton := widget.NewButton("", func() {
 		// sidebarScroll.Show()
@@ -328,6 +335,9 @@ func main() {
 		}
 	}
 
+	appLogger.Println("Remember to delete fyne folder from `.config/fyne` folder")
+
+	// mainContainer.Add(tabs)
 	w.SetContent(mainContainer)
 	w.ShowAndRun()
 }
