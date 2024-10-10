@@ -306,7 +306,7 @@ func main() {
 
 	imageContent := content
 
-	form.OnChanged = func(s string) {
+	form.OnSubmitted = func(s string) {
 		imagePaths, err := database.GetImagePathsByTag(db, "%"+s+"%")
 		if err != nil {
 			fmt.Print("searchImagesByTag")
@@ -314,8 +314,18 @@ func main() {
 			return
 		}
 		updateContentWithSearchResults(imageContent, imagePaths, db, w, sidebar, sidebarScroll, split, a)
-		// updateContentWithSearchResults(imageContent, imagePaths, db, w, sidebar, sidebarScroll, split, a)
 	}
+
+	// form.OnChanged = func(s string) {
+	// 	imagePaths, err := database.GetImagePathsByTag(db, "%"+s+"%")
+	// 	if err != nil {
+	// 		fmt.Print("searchImagesByTag")
+	// 		dialog.ShowError(err, w)
+	// 		return
+	// 	}
+	// 	updateContentWithSearchResults(imageContent, imagePaths, db, w, sidebar, sidebarScroll, split, a)
+	// 	// updateContentWithSearchResults(imageContent, imagePaths, db, w, sidebar, sidebarScroll, split, a)
+	// }
 
 	settingsButton := widget.NewButtonWithIcon("", theme.SettingsIcon(), func() {
 		utilwindows.ShowSettingsWindow(a, w, db, appOptions)
@@ -339,16 +349,16 @@ func main() {
 		container.NewPadded(split),
 	)
 
-	appLogger.Println("Test Tabs: ", mainContainer.Objects)
+	mainContainer = container.NewPadded(mainContainer)
 
 	mainTab := container.NewTabItem("Images", mainContainer)
-	testTab := container.NewTabItem("Test", container.NewVBox())
-	tabs := container.NewAppTabs(
-		// displays image scroll content in this tab
+	testTab := container.NewTabItem("Test", container.NewVBox()) // let user pick dir and diaplay all files in dir
+	// tabs := container.NewAppTabs(
+	tabs := container.NewDocTabs(
 		mainTab,
 		testTab,
+		// container.tab,
 		// Add more tabs as needed
-		// container.NewTabItem("Other Tab", otherContent),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
 
@@ -368,7 +378,7 @@ func main() {
 
 	scroll.OnScrolled = func(pos fyne.Position) {
 		// appLogger.Println("Scrolled: ", pos.Y)
-		if scroll.Offset.Y == 140+(float32(page)*648) && !appOptions.FirstBoot {
+		if scroll.Offset.Y == 148+(float32(page)*648) && !appOptions.FirstBoot {
 			page += 1
 			appLogger.Println("Scrolled to bottom. Current page: ", page)
 			appLogger.Println("Skip images: ", page*int(appOptions.ImageNumber))
@@ -385,8 +395,8 @@ func main() {
 	// ---------- CLAUDE LAYOUT END
 
 	appLogger.Println("Remember to delete fyne folder from `.config/fyne` folder")
-	// w.SetContent(mainContainer)
 	w.SetContent(tabs)
+	// w.SetContent(container.NewPadded(tabs))
 	w.ShowAndRun()
 }
 
@@ -506,15 +516,6 @@ func createDisplayImagesFunctionFromDb(db *sql.DB, w fyne.Window, sidebar *fyne.
 func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.Container, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App) {
 	// create a placeholder image
 	placeholderResource := fyne.NewStaticResource("placeholder", []byte{})
-	// imageContainer.Resize(w.Canvas().Size())
-	// sidebar.Resize(imageContainer.Size())
-	// appLogger.Println("Size Test: ", imageContainer.Size().Height)
-
-	// if len(imageContainer.Objects) > 20 {
-	// 	// imageContainer.Remove(imageContainer.Objects[0])
-	// 	// imageContainer.RemoveAll()
-	// 	appLogger.Println("Too many images")
-	// }
 
 	if filepath.Ext(path) == ".gif" {
 		// imgButton, err := fyneGif.NewAnimatedGifFromResource(placeholderResource)
@@ -530,7 +531,7 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 		gifButton.Start()
 
 		imageContainer.Add(container.NewPadded(gifButton))
-		appLogger.Println("Skipping GIF")
+		// appLogger.Println("Skipping GIF")
 	} else {
 		imgButton := newImageButton(placeholderResource)
 
@@ -589,8 +590,7 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 		imageTile := container.NewVBox(container.NewPadded(imgButton))
 		imageContainer.Add(imageTile)
 	}
-	appLogger.Println("Showing ", len(imageContainer.Objects), " images")
-	// appLogger.Println("Image Container size: ", imageContainer.Size())
+	// appLogger.Println("Showing ", len(imageContainer.Objects), " images")
 }
 
 // UNDER NO CIRCUMSTANCES CHANGE THE ORDER IN displayImage func OR THERE WILL BE ERRORS WHEN FYNE IS LOADING IMAGES
