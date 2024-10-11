@@ -973,6 +973,8 @@ func loadImageResourceThumbnailEfficient(path string) (fyne.Resource, error) {
 		img, _, err = image.Decode(file)
 	case ".png":
 		img, _, err = image.Decode(file)
+	case ".gif":
+		img, err = gif.Decode(file)
 	case ".bmp":
 		img, err = bmp.Decode(file)
 	case ".webp":
@@ -1024,7 +1026,8 @@ func loadImageResourceThumbnailEfficient(path string) (fyne.Resource, error) {
 	case ".png":
 		err = png.Encode(&buf, thumbImg)
 	case ".gif":
-		err = gif.Encode(&buf, thumbImg, &gif.Options{NumColors: 256})
+		// err = gif.Encode(&buf, thumbImg, &gif.Options{NumColors: 256})
+		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
 	case ".bmp":
 		// img, err = png.Decode(file)
 		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
