@@ -5,9 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"image"
-	"time"
 
-	// "image/color"
 	"image/gif"
 	"image/jpeg"
 	"image/png"
@@ -26,8 +24,6 @@ import (
 	"strings"
 	"sync"
 
-	// "main/pkg/fynecomponents/imgbtn"
-
 	"github.com/gen2brain/avif"
 	"github.com/gen2brain/svg"
 	"github.com/jdeng/goheif"
@@ -42,7 +38,11 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+
+	"time"
+
 	"fyne.io/fyne/v2/driver/desktop"
+
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	fyneGif "fyne.io/x/fyne/widget"
@@ -55,21 +55,21 @@ import (
 
 type imageButton struct {
 	widget.BaseWidget
-	image        *canvas.Image
+	Image        *canvas.Image
 	onTapped     func()
 	onLongTap    func()
 	onRightClick func()
 	pressedTime  time.Time
 	longTapTimer *time.Timer
-	selected     bool
+	Selected     bool
 }
 
 func newImageButton(resource fyne.Resource) *imageButton {
 	img := &imageButton{}
 	img.ExtendBaseWidget(img)
-	img.image = canvas.NewImageFromResource(resource)
-	img.image.FillMode = canvas.ImageFillContain
-	img.image.SetMinSize(fyne.NewSize(150, 150))
+	img.Image = canvas.NewImageFromResource(resource)
+	img.Image.FillMode = canvas.ImageFillContain
+	img.Image.SetMinSize(fyne.NewSize(150, 150))
 	return img
 }
 
@@ -89,19 +89,19 @@ func (b *imageButton) LongTap(me *desktop.MouseEvent) {
 	if me.Button == desktop.MouseButtonPrimary {
 		if b.onLongTap != nil {
 			b.onLongTap()
-			b.selected = !b.selected
+			b.Selected = !b.Selected
 			b.Refresh()
 		}
 	}
 }
 
 func (b *imageButton) Refresh() {
-	if b.selected {
-		b.image.Translucency = 0.7
+	if b.Selected {
+		b.Image.Translucency = 0.7
 	} else {
-		b.image.Translucency = 0
+		b.Image.Translucency = 0
 	}
-	canvas.Refresh(b.image)
+	canvas.Refresh(b.Image)
 }
 
 func (b *imageButton) MouseDown(me *desktop.MouseEvent) {
@@ -125,7 +125,114 @@ func (b *imageButton) MouseUp(_ *desktop.MouseEvent) {
 }
 
 func (b *imageButton) CreateRenderer() fyne.WidgetRenderer {
-	return widget.NewSimpleRenderer(b.image)
+	return widget.NewSimpleRenderer(b.Image)
+}
+
+func (b *imageButton) SetOnTapped(f func()) {
+	b.onTapped = f
+}
+
+// SetOnLongTap sets the function to be called when the button is long-pressed
+func (b *imageButton) SetOnLongTap(f func()) {
+	b.onLongTap = f
+}
+
+// SetOnRightClick sets the function to be called when the button is right-clicked
+func (b *imageButton) SetOnRightClick(f func()) {
+	b.onRightClick = f
+}
+
+type GifButton struct {
+	widget.BaseWidget
+	animation    *fyneGif.AnimatedGif
+	onTapped     func()
+	onLongTap    func()
+	onRightClick func()
+	pressedTime  time.Time
+	longTapTimer *time.Timer
+	Selected     bool
+}
+
+// NewGifButton creates a new animated GIF button from the specified resource
+func NewGifButton(path fyne.URI) *GifButton {
+	gif := &GifButton{}
+	gif.ExtendBaseWidget(gif)
+	// gif.animation, _ = fyneGif.NewAnimatedGifFromResource(resource)
+	gif.animation, _ = fyneGif.NewAnimatedGif(path)
+	gif.animation.SetMinSize(fyne.NewSize(150, 150))
+	gif.animation.Start() // Start the animation by default
+	return gif
+}
+
+// SetOnTapped sets the function to be called when the button is tapped
+func (b *GifButton) SetOnTapped(f func()) {
+	b.onTapped = f
+}
+
+// SetOnLongTap sets the function to be called when the button is long-pressed
+func (b *GifButton) SetOnLongTap(f func()) {
+	b.onLongTap = f
+}
+
+// SetOnRightClick sets the function to be called when the button is right-clicked
+func (b *GifButton) SetOnRightClick(f func()) {
+	b.onRightClick = f
+}
+
+// StartAnimation starts the GIF animation
+func (b *GifButton) StartAnimation() {
+	b.animation.Start()
+}
+
+// StopAnimation stops the GIF animation
+func (b *GifButton) StopAnimation() {
+	b.animation.Stop()
+}
+
+// Tapped handles the tap event
+func (b *GifButton) Tapped(_ *fyne.PointEvent) {
+	if b.onTapped != nil {
+		b.onTapped()
+	}
+}
+
+// TappedSecondary handles the right-click event
+func (b *GifButton) TappedSecondary(_ *fyne.PointEvent) {
+	if b.onRightClick != nil {
+		b.onRightClick()
+	}
+}
+
+// MouseDown handles the mouse down event
+func (b *GifButton) MouseDown(me *desktop.MouseEvent) {
+	if me.Button == desktop.MouseButtonPrimary {
+		b.pressedTime = time.Now()
+		b.longTapTimer = time.AfterFunc(time.Millisecond*200, func() {
+			if b.onLongTap != nil {
+				b.onLongTap()
+			}
+		})
+	}
+}
+
+// MouseUp handles the mouse up event
+func (b *GifButton) MouseUp(me *desktop.MouseEvent) {
+	if b.longTapTimer != nil {
+		b.longTapTimer.Stop()
+	}
+	if time.Since(b.pressedTime) < time.Millisecond*200 {
+		b.Tapped(nil)
+	}
+}
+
+// Refresh updates the widget's appearance
+func (b *GifButton) Refresh() {
+	b.BaseWidget.Refresh()
+}
+
+// CreateRenderer implements the fyne.Widget interface
+func (b *GifButton) CreateRenderer() fyne.WidgetRenderer {
+	return widget.NewSimpleRenderer(b.animation)
 }
 
 var (
@@ -519,20 +626,73 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 
 	if filepath.Ext(path) == ".gif" {
 		// imgButton, err := fyneGif.NewAnimatedGifFromResource(placeholderResource)
-		gifPath, err := storage.ParseURI("file://" + path)
-		if err != nil {
-			appLogger.Fatal("Failed to parse uri: ", err)
-		}
-		gifButton, err := fyneGif.NewAnimatedGif(gifPath)
-		if err != nil {
-			appLogger.Fatal("Failed to load gif: ", err)
-		}
+		// gifButton := NewGifButton(placeholderResource)
+		// gifPath, err := storage.ParseURI("file://" + path)
+		// if err != nil {
+		// 	appLogger.Fatal("Failed to parse uri: ", err)
+		// }
+		// gifButton, err := fyneGif.NewAnimatedGif(gifPath)
+		// if err != nil {
+		// 	appLogger.Fatal("Failed to load gif: ", err)
+		// }
 
-		gifButton.Start()
+		// gifButton.Start()
+		gifPath, _ := storage.ParseURI("file://" + path)
+		gifButton := NewGifButton(gifPath)
+		gifButton.StartAnimation()
+
+		resourceChan := make(chan fyne.Resource, 1)
+
+		// claude ai solution to load images in bg
+		go func() {
+			// load the image as a fyne resource
+			resource, err := loadImageResourceThumbnailEfficient(path)
+			if err != nil {
+				appLogger.Printf("No resource image empty %s: %v", path, err)
+				resourceChan <- placeholderResource
+				return
+			}
+
+			// set the image button image to the resource
+			// imgButton.image.Refresh()
+			resourceChan <- resource
+		}()
+
+		resource := <-resourceChan
+
+		gifButton.SetOnTapped(func() {
+			appLogger.Println("TAPPED GIF")
+			updateSidebar(db, w, path, resource, sidebar, sidebarScroll, split, a, imageContainer)
+		})
+
+		gifButton.SetOnLongTap(func() {
+			// If image is not already selected and selectedFiles is 0 or bigger than 0
+			if len(selectedFiles) >= 0 && !selectedFiles[path] {
+				selectedFiles[path] = true
+				appLogger.Println("Added new file: ", path)
+				// gifButton.Image.Translucency = 0.7
+				gifButton.Selected = true
+				canvas.Refresh(gifButton)
+				// If image is already selected and selectedFiles is 0 or bigger than 0
+			} else if len(selectedFiles) >= 0 && selectedFiles[path] {
+				appLogger.Println("Removed file: ", path)
+				delete(selectedFiles, path)
+				// gifButton.Image.Translucency = 0
+				gifButton.Selected = false
+				canvas.Refresh(gifButton)
+			}
+			appLogger.Println("Selected files: ", selectedFiles)
+		})
+
+		gifButton.SetOnRightClick(func() {
+			appLogger.Println("Add functionality to open menu to add to archive and compress")
+			utilwindows.ShowRightClickMenu(w, selectedFiles, a)
+		})
 
 		imageContainer.Add(container.NewPadded(gifButton))
 		// appLogger.Println("Skipping GIF")
 	} else {
+		// imgButton := imagebutton.NewImageButton(placeholderResource)
 		imgButton := newImageButton(placeholderResource)
 
 		resourceChan := make(chan fyne.Resource, 1)
@@ -549,42 +709,67 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 			}
 
 			// set the image button image to the resource
-			imgButton.image.Resource = resource
-			imgButton.image.Translucency = 0
+			imgButton.Image.Resource = resource
+			imgButton.Image.Translucency = 0
 			// imgButton.image.Refresh()
 			canvas.Refresh(imgButton)
 			resourceChan <- resource
 		}()
 
 		resource := <-resourceChan
-		imgButton.onTapped = func() {
-			// updates the sidebar
+		imgButton.SetOnTapped(func() {
 			updateSidebar(db, w, path, resource, sidebar, sidebarScroll, split, a, imageContainer)
-		}
+		})
+		// imgButton.OnTapped = func() {
+		// 	// updates the sidebar
+		// 	updateSidebar(db, w, path, resource, sidebar, sidebarScroll, split, a, imageContainer)
+		// }
 
-		imgButton.onLongTap = func() {
+		imgButton.SetOnLongTap(func() {
 			// If image is not already selected and selectedFiles is 0 or bigger than 0
 			if len(selectedFiles) >= 0 && !selectedFiles[path] {
 				selectedFiles[path] = true
 				appLogger.Println("Added new file: ", path)
-				imgButton.image.Translucency = 0.7
-				imgButton.selected = true
+				imgButton.Image.Translucency = 0.7
+				imgButton.Selected = true
 				canvas.Refresh(imgButton)
 				// If image is already selected and selectedFiles is 0 or bigger than 0
 			} else if len(selectedFiles) >= 0 && selectedFiles[path] {
 				appLogger.Println("Removed file: ", path)
 				delete(selectedFiles, path)
-				imgButton.image.Translucency = 0
-				imgButton.selected = false
+				imgButton.Image.Translucency = 0
+				imgButton.Selected = false
 				canvas.Refresh(imgButton)
 			}
 			appLogger.Println("Selected files: ", selectedFiles)
-		}
+		})
+		// imgButton.OnLongTap = func() {
+		// 	// If image is not already selected and selectedFiles is 0 or bigger than 0
+		// 	if len(selectedFiles) >= 0 && !selectedFiles[path] {
+		// 		selectedFiles[path] = true
+		// 		appLogger.Println("Added new file: ", path)
+		// 		imgButton.Image.Translucency = 0.7
+		// 		imgButton.Selected = true
+		// 		canvas.Refresh(imgButton)
+		// 		// If image is already selected and selectedFiles is 0 or bigger than 0
+		// 	} else if len(selectedFiles) >= 0 && selectedFiles[path] {
+		// 		appLogger.Println("Removed file: ", path)
+		// 		delete(selectedFiles, path)
+		// 		imgButton.Image.Translucency = 0
+		// 		imgButton.Selected = false
+		// 		canvas.Refresh(imgButton)
+		// 	}
+		// 	appLogger.Println("Selected files: ", selectedFiles)
+		// }
 
-		imgButton.onRightClick = func() {
+		imgButton.SetOnRightClick(func() {
 			appLogger.Println("Add functionality to open menu to add to archive and compress")
 			utilwindows.ShowRightClickMenu(w, selectedFiles, a)
-		}
+		})
+		// imgButton.OnRightClick = func() {
+		// 	appLogger.Println("Add functionality to open menu to add to archive and compress")
+		// 	utilwindows.ShowRightClickMenu(w, selectedFiles, a)
+		// }
 
 		// make a parent container to hold the image button and label
 		imageTile := container.NewVBox(container.NewPadded(imgButton))
