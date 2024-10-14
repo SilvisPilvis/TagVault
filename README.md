@@ -2,6 +2,8 @@
 
 ## A simple file management app with tags
 
+[![wakatime](https://wakatime.com/badge/user/ee6ea1f8-6dfb-4436-aeb5-8339646633e5/project/4a604a7d-5a64-4fcd-a9bf-e2b84fe10b72.svg)](https://wakatime.com/badge/user/ee6ea1f8-6dfb-4436-aeb5-8339646633e5/project/4a604a7d-5a64-4fcd-a9bf-e2b84fe10b72)
+
 You can create tags, add them to images and search images by tags.
 To make tags more stylish you can add colors to them.
 

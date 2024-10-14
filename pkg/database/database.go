@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"main/pkg/fileutils"
 	"main/pkg/imageconv"
 	"main/pkg/logger"
@@ -18,8 +17,9 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// var Db *sql.DB = nil
 var appLogger = logger.InitLogger()
+var currentTime = time.Now().Format("2006-01-02")
+var userHome, _ = os.UserHomeDir()
 
 func Init() *sql.DB {
 	db, err := sql.Open("sqlite3", fmt.Sprintf("file:%s.db?timeout=10000&_busy_timeout=10000", runtime.GOOS))
@@ -44,7 +44,6 @@ func setupTables(db *sql.DB) {
 		"CREATE TABLE IF NOT EXISTS `FileTag`(`id` INTEGER PRIMARY KEY NOT NULL, `fileId` INTEGER NOT NULL, `tagId` INTEGER NOT NULL);",
 		"CREATE TABLE IF NOT EXISTS `Options`(`id` INTEGER PRIMARY KEY NOT NULL, `DatabasePath` VARCHAR(255) NOT NULL, `ExcludedDirs` VARCHAR(255) NOT NULL, `Timezone` VARCHAR(1024) NOT NULL, `SortDesc` BOOLEAN DEFAULT true, `UseRGB` BOOLEAN DEFAULT false, `ImageNumber` INTEGER NOT NULL DEFAULT 20, `ThumbnailSize` INTEGER NOT NULL DEFAULT 256, `Profiling` BOOLEAN DEFAULT false, `ExifFields` VARCHAR(255), `FirstBoot` BOOLEAN DEFAULT false);",
 		"PRAGMA journal_mode=WAL;",
-		// "INSERT INTO `Tag` (`name`, `color`) VALUES ('GIF', '#000000'), ('JPG', '#000000'), ('PNG', '#000000'), ('AVIF', '#000000'), ('WEBP', '#000000'), ('BMP', '#000000'), ('HEIC', '#000000'), ('TIFF', '#000000'), ('TIF', '#000000'), ('QOI', '#000000');",
 	}
 	for _, table := range tables {
 		if _, err := db.Exec(table); err != nil {
@@ -76,13 +75,19 @@ func AddImageTypeTags(db *sql.DB) error {
 	}
 
 	for i := 0; i < len(imageconv.ImageTypes); i++ {
+		// Adds image type tags
 		_, err = stmt.Exec(imageconv.ImageTypes[i], "#373c40", imageconv.ImageTypes[i])
 		if err != nil {
 			return err
 		}
 	}
 
-	// _, err = stmt.Exec("GIF", "#373c40", "GIF")
+	// Adds date added tag
+	_, err = stmt.Exec(currentTime, "#373c40", currentTime)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -138,15 +143,7 @@ func GetDate(db *sql.DB, path string) string {
 func GetImagePathsByTag(db *sql.DB, tagName string) ([]string, error) {
 	query := `SELECT DISTINCT File.path FROM File JOIN FileTag ON File.id = FileTag.fileId JOIN Tag ON FileTag.tagId = Tag.id WHERE Tag.name LIKE ?`
 
-	// appLogger.Println("Searchable Tag: ", tagName)
-
 	if tagName == "" || tagName == "%%" {
-		// query = `
-		// 	SELECT DISTINCT File.path
-		// 	FROM File
-		// 	JOIN FileTag ON File.id = FileTag.fileId
-		// 	JOIN Tag ON FileTag.tagId = Tag.id
-		// `
 		return GetImagesFromDatabase(db, 0, 20)
 	}
 
@@ -161,14 +158,6 @@ func GetImagePathsByTag(db *sql.DB, tagName string) ([]string, error) {
 		return nil, err
 	}
 	defer rows.Close()
-
-	// if tagName == "" || tagName == "%%" {
-	// 	rows, err = stmt.Query(query)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	defer rows.Close()
-	// }
 
 	var paths []string
 	for rows.Next() {
@@ -197,7 +186,7 @@ func SearchImagesByTag(db *sql.DB, tagName string) ([]string, error) {
 	`
 
 	rows, err := db.Query(query, tagName)
-	// rows, err := db.Query(query)
+
 	if err != nil {
 		return nil, err
 	}
@@ -216,20 +205,10 @@ func SearchImagesByTag(db *sql.DB, tagName string) ([]string, error) {
 }
 
 func replaceHomeDir(path string) string {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		log.Println("Error getting user home directory:", err)
-		return path
-	}
-	return strings.Replace(path, homeDir, "~", 1)
+	return strings.Replace(path, userHome, "~", 1)
 }
 
 func DiscoverImages(db *sql.DB, blacklist map[string]int) (bool, error) {
-	userHome, err := os.UserHomeDir()
-	if err != nil {
-		return false, fmt.Errorf("error getting user home directory: %w", err)
-	}
-
 	var count int = 0
 
 	appLogger.Println("Discovery started.")
@@ -270,15 +249,13 @@ func DiscoverImages(db *sql.DB, blacklist map[string]int) (bool, error) {
 						appLogger.Println("Not in db.")
 					}
 				}
-				// appLogger.Println("Is in db: ", isExcluded)
 
 				if isExcluded == 1 {
 					db.Exec(`DELETE FROM File WHERE path like ` + likePath + `;`)
 				}
 
-				// appLogger.Println("Skipping hidden/blacklisted directory: ", info.Name())
-				appLogger.Println("Skipping hidden/blacklisted directory: ", replaceHomeDir(path))
 				// Skip path if path is a hidden dir or in excluded dirs
+				appLogger.Println("Skipping hidden/blacklisted directory: ", replaceHomeDir(path))
 				return filepath.SkipDir
 			}
 			if fileutils.IsImageFileMap(path) {
@@ -291,25 +268,54 @@ func DiscoverImages(db *sql.DB, blacklist map[string]int) (bool, error) {
 				// inserts image path into database
 				insertId, err := stmt.Exec(path, imageHash, path)
 				if err != nil {
-					// appLogger.Println("Failed to insert image into database: ", err)
 					return fmt.Errorf("failed to insert image into database: %w", err)
 				}
 				lastId, _ := insertId.LastInsertId()
 
 				extension := filepath.Ext(path)[1:]
-				// extension = strings.TrimPrefix(extension, ".") // replace with slice 1 from front instead
 				extension = strings.ToUpper(extension)
 
-				// appLogger.Println("Image Hash Len: ", len(imageHash))
 				var extensionId int
 
+				// check if extension is already in database
 				db.QueryRow("SELECT id FROM Tag WHERE name = ?", extension).Scan(&extensionId)
+				if extensionId != 0 {
+					// add extension tag to image
+					db.Exec(`INSERT INTO FileTag (fileId, tagId)
+    				SELECT ?, ?
+    				WHERE NOT EXISTS (
+					SELECT 1 FROM FileTag
+        			WHERE fileId = ? AND tagId = ?
+    				)`, lastId, extensionId, lastId, extensionId)
+				}
 
-				db.Exec("INSERT INTO FileTag (fileId, tagId) VALUES (?, ?)", lastId, extensionId, imageHash)
+				// check if date tag in db
+				var date int
+				db.QueryRow("SELECT id from Tag where name like ?", currentTime+"%").Scan(&date)
+				// var dateExists int
+				// db.QueryRow("SELECT 1 FROM FileTag WHERE fileId = ? AND tagId = ?", lastId, date).Scan(&dateExists)
+				// insert date in db if doesn't exist
+				if date == 0 {
+					dateInsert, _ := db.Exec("INSERT INTO Tag (name, color) VALUES (?, ?)", currentTime, "#373c40")
+					dateId, _ := dateInsert.LastInsertId()
+					if dateId != 0 {
+						// insert date if date tag id is not 0
+						db.Exec(`INSERT INTO FileTag (fileId, tagId)
+						SELECT ?, ?
+						WHERE NOT EXISTS (
+						SELECT 1 FROM FileTag
+						WHERE fileId = ? AND tagId = ?
+						)`, lastId, dateId, lastId, dateId)
+						// db.Exec("INSERT INTO FileTag (fileId, tagId) VALUES (?, ?)", lastId, dateId)
+					}
+				}
+				// if date tag exists add date tag to image
+				if date != 0 {
+					db.Exec("INSERT INTO FileTag (fileId, tagId) VALUES (?, ?)", lastId, date)
+				}
 
 				count++
 			}
-			// appLogger.Println("File not image or already in db:\n", path)
 			return nil
 		})
 		if err != nil {
@@ -356,21 +362,3 @@ func GetTagColorById(db *sql.DB, tagId int) (string, error) {
 	err := db.QueryRow("SELECT color FROM Tag WHERE id = ?", tagId).Scan(&tagColor)
 	return tagColor, err
 }
-
-// func init() {
-// 	Db, err := sql.Open("sqlite3", "file:../index.db")
-// 	if err != nil {
-// 		panic(err.Error())
-// 	}
-// 	Db.SetMaxOpenConns(1)
-// 	defer Db.Close()
-
-// 	// check the connection
-// 	err = Db.Ping()
-// 	if err != nil {
-// 		fmt.Print("Not Connected to db!\n")
-// 		appLogger.Fatal(err.Error(), "\n")
-// 	}
-// 	fmt.Print("Connected to db!\n")
-// 	// return Db
-// }
