@@ -3,4 +3,6 @@ icon.png
 icon.xcf
 img2bytes.*
 spinner.*
+*.db-wal
+*.db-shm
 /pyroscope

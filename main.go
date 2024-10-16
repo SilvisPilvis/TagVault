@@ -821,7 +821,7 @@ func loadImageResourceEfficient(path string) (fyne.Resource, error) {
 	case ".avif":
 		// avif.Encode(&buf, thumbImg, avif.Options{Quality: 85})
 		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
-		os.Exit(1)
+		// os.Exit(1)
 	case ".qoi":
 		// err = qoi.Encode(&buf, thumbImg)
 		err = jpeg.Encode(&buf, thumbImg, &jpeg.Options{Quality: 85})
@@ -958,7 +958,7 @@ func loadImageResourceThumbnailEfficient(path string) (fyne.Resource, error) {
 // Function to update the main content based on search results
 func updateContentWithSearchResults(content *fyne.Container, imagePaths []string, db *sql.DB, w fyne.Window, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App) {
 	content.RemoveAll()
-	imageContainer := container.NewAdaptiveGrid(4)
+	imageContainer := container.NewAdaptiveGrid(5)
 	content.Add(imageContainer)
 
 	for _, path := range imagePaths {

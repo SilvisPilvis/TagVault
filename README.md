@@ -28,7 +28,7 @@ Coming soon:
 - [x] Compress
 - [x] Encrypt
 - [x] GIFs will GIF (GIFs now GIF)
-- [ ] Convert
+- [x] Convert
 - [ ] Sorting (Currently sorts by date added)
 
 Current supported image types:
@@ -42,8 +42,8 @@ Current supported image types:
 - [x] WEBP
 - [x] AVIF
 - [x] QOI
+- [x] SVG   Only Viewing
 - [ ] RAW   No
-- [ ] SVG   Most Probably Not
 - [ ] JPEGXL   Someday... Maybe... Possibly...?
 
 ## App Demo Images
