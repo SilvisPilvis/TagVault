@@ -84,3 +84,23 @@ func GetFileMD5HashBuffered(filePath string) (string, error) {
 
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
+
+func GetDirFiles(path string) ([]string, error) {
+	dirFiles, err := os.ReadDir(path)
+	if err != nil {
+		return nil, fmt.Errorf("error reading directory: %v", err)
+	}
+
+	var files []string
+	for _, v := range dirFiles {
+		// if v.IsDir() {
+		// 	continue
+		// }
+		// if filepath.Ext(v.Name()) != ".md" {
+		// 	continue
+		// }
+		files = append(files, v.Name())
+	}
+
+	return files, nil
+}

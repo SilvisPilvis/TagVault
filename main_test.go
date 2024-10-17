@@ -1,6 +1,7 @@
 package main_test
 
 import (
+	"fmt"
 	"main/pkg/fileutils"
 	"path/filepath"
 	"strings"
@@ -103,6 +104,15 @@ func TestDirectoryExclusionBlacklist(t *testing.T) {
 func TestFullFilepathExclusion(t *testing.T) {
 	// Check the window title
 	assert.True(t, isExcludedDir("/home/amaterasu/Audio", blackList), "Full Filepath is not excluded")
+}
+
+func TestGetDirFiles(t *testing.T) {
+	// Check the window title
+	dirContents, err := fileutils.GetDirFiles("/home/amaterasu/Desktop/code-house")
+	assert.NoError(t, err)
+	fmt.Println(dirContents)
+	assert.NotNil(t, dirContents, "The GetDirFiles function returned nil")
+
 }
 
 func isExcludedDir(dir string, blackList map[string]int) bool {
