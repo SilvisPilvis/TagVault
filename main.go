@@ -190,7 +190,7 @@ func (b *GifButton) StopAnimation() {
 }
 
 // Tapped handles the tap event
-func (b *GifButton) Tapped(_ *fyne.PointEvent) {
+func (b *GifButton) Tapped(_ *desktop.MouseEvent) {
 	if b.onTapped != nil {
 		b.onTapped()
 	}
