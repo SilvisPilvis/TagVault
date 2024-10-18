@@ -376,6 +376,7 @@ func main() {
 
 	mainTab := container.NewTabItem("Images", mainContainer)
 	testTab := container.NewTabItem("Test", container.NewVBox()) // let user pick dir and diaplay all files in dir
+
 	tabs := container.NewDocTabs(
 		mainTab,
 		testTab,

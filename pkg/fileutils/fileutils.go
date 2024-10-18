@@ -93,13 +93,16 @@ func GetDirFiles(path string) ([]string, error) {
 
 	var files []string
 	for _, v := range dirFiles {
-		// if v.IsDir() {
-		// 	continue
-		// }
+		if v.IsDir() {
+			// if file is a directory append /
+			files = append(files, v.Name()+"/")
+			// continue
+		} else {
+			files = append(files, v.Name())
+		}
 		// if filepath.Ext(v.Name()) != ".md" {
 		// 	continue
 		// }
-		files = append(files, v.Name())
 	}
 
 	return files, nil
