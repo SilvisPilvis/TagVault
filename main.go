@@ -521,12 +521,12 @@ func CreateDisplayDirContentsContainer(dirFiles []string) *fyne.Container {
 
 func SetDisplayDirNewContent(content *fyne.Container, files []string, currentDir string) *fyne.Container {
 	content.RemoveAll()
-	appLogger.Println("Back Button: ", currentDir)
+	// appLogger.Println("Back Button: ", currentDir)
 
 	content.Add(widget.NewButtonWithIcon("", theme.NavigateBackIcon(),
 		func() {
 			parentDir := filepath.Dir(currentDir)
-			if parentDir == "/" || parentDir == home {
+			if parentDir == "/" || parentDir == "/home" || parentDir == home {
 				SetDisplayDirNewContent(content, nil, home)
 			} else {
 				SetDisplayDirNewContent(content, nil, parentDir)
