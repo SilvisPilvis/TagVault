@@ -39,14 +39,11 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
-
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
-
+	"fyne.io/fyne/v2/widget"
 	// fyneGif "fyne.io/x/fyne/widget"
 	// "fyne.io/fyne/v2/storage"
-
-	"fyne.io/fyne/v2/widget"
 )
 
 var (
@@ -190,10 +187,13 @@ func main() {
 
 	mainTab := container.NewTabItem("Images", mainContainer)
 	testTab := container.NewTabItem("Test", container.NewVBox()) // let user pick dir and diaplay all files in dir
+	defaultDir, _ := fileutils.GetDirFiles("/home/amaterasu/")
+	homeTab := container.NewTabItem("Home", CreateDisplayDirContentsContainer(defaultDir))
 
 	tabs := container.NewDocTabs(
 		mainTab,
 		testTab,
+		homeTab,
 		// Add more tabs as needed
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
@@ -489,6 +489,38 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 		imageContainer.Add(imageTile)
 	}
 	// appLogger.Println("Showing ", len(imageContainer.Objects), " images")
+}
+
+func CreateDisplayDirContentsContainer(dirFiles []string) *fyne.Container {
+	fileContainer := container.NewAdaptiveGrid(5) // default value 4
+	fileContainer.RemoveAll()
+	_ = container.NewVScroll(fileContainer)
+	for _, v := range dirFiles {
+		// check if current item is a directory
+		if string(v[len(v)-1]) == "/" {
+			// icon := widget.NewButtonWithIcon(v, theme.FolderIcon(), SetDisplayDirNewContent(fileContainer))
+			test, _ := fileutils.GetDirFiles(home + v)
+			icon := widget.NewButtonWithIcon(v, theme.FolderIcon(), func() {
+				CreateDisplayDirContentsContainer(test)
+			})
+			// icon.Alignment =
+			// fileButton := container.NewPadded(container.NewAdaptiveGrid(2, icon, widget.NewLabel(v)))
+			// fileContainer.Add(fileButton)
+			fileContainer.Add(icon)
+		} else {
+			// this will run if current item is not a dir
+			icon := widget.NewButtonWithIcon(v, theme.FileIcon(), nil)
+			// fileButton := container.NewPadded(container.NewAdaptiveGrid(2, icon, widget.NewLabel(v)))
+			// fileContainer.Add(fileButton)
+			fileContainer.Add(icon)
+		}
+	}
+	return fileContainer
+	// return fileContainerScroll
+}
+
+func SetDisplayDirNewContent(content *fyne.Container) *fyne.Container {
+	return content
 }
 
 // UNDER NO CIRCUMSTANCES CHANGE THE ORDER IN displayImage func OR THERE WILL BE ERRORS WHEN FYNE IS LOADING IMAGES
