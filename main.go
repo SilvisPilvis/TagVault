@@ -186,13 +186,13 @@ func main() {
 	mainContainer = container.NewPadded(mainContainer)
 
 	mainTab := container.NewTabItem("Images", mainContainer)
-	testTab := container.NewTabItem("Test", container.NewVBox()) // let user pick dir and diaplay all files in dir
+	// testTab := container.NewTabItem("Test", container.NewVBox()) // let user pick dir and diaplay all files in dir
 	defaultDir, _ := fileutils.GetDirFiles("/home/amaterasu/")
 	homeTab := container.NewTabItem("Home", CreateDisplayDirContentsContainer(defaultDir))
 
 	tabs := container.NewDocTabs(
 		mainTab,
-		testTab,
+		// testTab,
 		homeTab,
 		// Add more tabs as needed
 	)
@@ -522,17 +522,18 @@ func CreateDisplayDirContentsContainer(dirFiles []string) *fyne.Container {
 func SetDisplayDirNewContent(content *fyne.Container, files []string, currentDir string) *fyne.Container {
 	content.RemoveAll()
 	// appLogger.Println("Back Button: ", currentDir)
-
-	content.Add(widget.NewButtonWithIcon("", theme.NavigateBackIcon(),
-		func() {
-			parentDir := filepath.Dir(currentDir)
-			if parentDir == "/" || parentDir == "/home" || parentDir == home {
-				SetDisplayDirNewContent(content, nil, home)
-			} else {
-				SetDisplayDirNewContent(content, nil, parentDir)
-			}
-		}),
-	)
+	if currentDir != home || currentDir != "/home" || currentDir != "/" {
+		content.Add(widget.NewButtonWithIcon("", theme.NavigateBackIcon(),
+			func() {
+				parentDir := filepath.Dir(currentDir)
+				if parentDir == "/" || parentDir == "/home" || parentDir == home {
+					SetDisplayDirNewContent(content, nil, home)
+				} else {
+					SetDisplayDirNewContent(content, nil, parentDir)
+				}
+			}),
+		)
+	}
 
 	var dirContent []string
 	var err error
@@ -631,13 +632,15 @@ func truncateFilename(filename string, maxLength int, showExt bool) string {
 	// get the filename without extension
 	nameWithoutExt := filename[:len(filename)-len(ext)]
 	// if filename without extension is bigger or equal to maxLength, return filename with extension
-	if len(nameWithoutExt) <= maxLength {
-		return nameWithoutExt
-	} else {
+	if len(nameWithoutExt) > maxLength {
+
 		if showExt {
 			return nameWithoutExt[:maxLength] + ".." + ext
 		}
 		return nameWithoutExt[:maxLength] + "..."
+
+	} else {
+		return filename
 	}
 }
 
