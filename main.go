@@ -492,34 +492,79 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 }
 
 func CreateDisplayDirContentsContainer(dirFiles []string) *fyne.Container {
-	fileContainer := container.NewAdaptiveGrid(5) // default value 4
+	fileContainer := container.NewAdaptiveGrid(4) // default value 4
 	fileContainer.RemoveAll()
-	_ = container.NewVScroll(fileContainer)
+
+	scrollContainer := container.NewVScroll(fileContainer)
+
 	for _, v := range dirFiles {
 		// check if current item is a directory
 		if string(v[len(v)-1]) == "/" {
-			// icon := widget.NewButtonWithIcon(v, theme.FolderIcon(), SetDisplayDirNewContent(fileContainer))
-			test, _ := fileutils.GetDirFiles(home + v)
-			icon := widget.NewButtonWithIcon(v, theme.FolderIcon(), func() {
-				CreateDisplayDirContentsContainer(test)
+			test, _ := fileutils.GetDirFiles(home + "/" + v)
+			icon := widget.NewButtonWithIcon(truncateDirname(v, 10), theme.FolderIcon(), func() {
+				SetDisplayDirNewContent(fileContainer, test, home+"/"+v)
 			})
-			// icon.Alignment =
-			// fileButton := container.NewPadded(container.NewAdaptiveGrid(2, icon, widget.NewLabel(v)))
-			// fileContainer.Add(fileButton)
+			icon.Alignment = widget.ButtonAlignCenter
+			icon.IconPlacement = widget.ButtonIconLeadingText
 			fileContainer.Add(icon)
 		} else {
 			// this will run if current item is not a dir
-			icon := widget.NewButtonWithIcon(v, theme.FileIcon(), nil)
-			// fileButton := container.NewPadded(container.NewAdaptiveGrid(2, icon, widget.NewLabel(v)))
-			// fileContainer.Add(fileButton)
+			icon := widget.NewButtonWithIcon(truncateFilename(v, 10, true), theme.FileIcon(), nil)
+			icon.Alignment = widget.ButtonAlignCenter
+			icon.IconPlacement = widget.ButtonIconLeadingText
 			fileContainer.Add(icon)
 		}
 	}
-	return fileContainer
-	// return fileContainerScroll
+
+	return container.NewPadded(container.NewStack(scrollContainer))
 }
 
-func SetDisplayDirNewContent(content *fyne.Container) *fyne.Container {
+func SetDisplayDirNewContent(content *fyne.Container, files []string, currentDir string) *fyne.Container {
+	content.RemoveAll()
+	appLogger.Println("Back Button: ", currentDir)
+
+	content.Add(widget.NewButtonWithIcon("", theme.NavigateBackIcon(),
+		func() {
+			parentDir := filepath.Dir(currentDir)
+			if parentDir == "/" || parentDir == home {
+				SetDisplayDirNewContent(content, nil, home)
+			} else {
+				SetDisplayDirNewContent(content, nil, parentDir)
+			}
+		}),
+	)
+
+	var dirContent []string
+	var err error
+
+	if files == nil {
+		dirContent, err = fileutils.GetDirFiles(currentDir)
+		if err != nil {
+			appLogger.Println("Error getting directory contents:", err)
+			return content
+		}
+	} else {
+		dirContent = files
+	}
+
+	for _, v := range dirContent {
+		isDir := string(v[len(v)-1]) == "/"
+		var icon *widget.Button
+
+		if isDir {
+			icon = widget.NewButtonWithIcon(truncateDirname(v, 10), theme.FolderIcon(), func() {
+				newDir := filepath.Join(currentDir, v)
+				SetDisplayDirNewContent(content, nil, newDir)
+			})
+		} else {
+			icon = widget.NewButtonWithIcon(truncateFilename(v, 10, true), theme.FileIcon(), nil)
+		}
+
+		icon.Alignment = widget.ButtonAlignCenter
+		icon.IconPlacement = widget.ButtonIconLeadingText
+		content.Add(icon)
+	}
+
 	return content
 }
 
@@ -534,7 +579,7 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	fullImg.SetMinSize(fyne.NewSize(200, 200))
 	paddedImg := container.NewPadded(fullImg)
 
-	fullLabel := widget.NewLabel(truncateFilename(filepath.Base(path), 20))
+	fullLabel := widget.NewLabel(truncateFilename(filepath.Base(path), 20, false))
 	fullLabel.Wrapping = fyne.TextWrapWord
 
 	dateAdded := widget.NewLabel("Date Added: " + database.GetDate(db, path))
@@ -576,7 +621,11 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	// sidebar.Refresh()
 }
 
-func truncateFilename(filename string, maxLength int) string {
+func truncateFilename(filename string, maxLength int, showExt bool) string {
+	// if hidden file don't truncate it
+	if string(filename[0]) == "." {
+		return filename
+	}
 	// get the file extension
 	ext := filepath.Ext(filename)
 	// get the filename without extension
@@ -585,9 +634,27 @@ func truncateFilename(filename string, maxLength int) string {
 	if len(nameWithoutExt) <= maxLength {
 		return nameWithoutExt
 	} else {
-		// return nameWithoutExt[:maxLength] + ext
+		if showExt {
+			return nameWithoutExt[:maxLength] + ".." + ext
+		}
 		return nameWithoutExt[:maxLength] + "..."
 	}
+}
+
+func truncateDirname(dirname string, maxLength int) string {
+	// if is hidden directory don't truncate it
+	if string(dirname[0]) == "." {
+		// if len(dirname) >= maxLength {
+		// 	return dirname[:maxLength]
+		// }
+		return dirname
+	}
+
+	// if normal directory
+	if len(dirname) > maxLength {
+		return dirname[:maxLength] + "..."
+	}
+	return dirname
 }
 
 // Optimized function to load image resources

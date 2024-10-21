@@ -1,7 +1,6 @@
 package main_test
 
 import (
-	"fmt"
 	"main/pkg/fileutils"
 	"path/filepath"
 	"strings"
@@ -110,7 +109,7 @@ func TestGetDirFiles(t *testing.T) {
 	// Check the window title
 	dirContents, err := fileutils.GetDirFiles("/home/amaterasu/Desktop/code-house")
 	assert.NoError(t, err)
-	fmt.Println(dirContents)
+	// fmt.Println(dirContents)
 	assert.NotNil(t, dirContents, "The GetDirFiles function returned nil")
 
 }
