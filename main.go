@@ -646,7 +646,7 @@ func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resourc
 	})
 
 	// Create fullscreen button
-	fullscreenButton := widget.NewButton("Fullscreen", func() {
+	fullscreenButton := widget.NewButtonWithIcon("", theme.ViewFullScreenIcon(), func() {
 		// Create new image for fullscreen view
 		// fullscreenImg := canvas.NewImageFromResource(resource)
 		fullscreenImg := canvas.NewImageFromFile(path)
