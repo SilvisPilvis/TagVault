@@ -1,7 +1,7 @@
-# ![App icon: ](./icon.png) Tag Vault
-<!-- <img src="./icon.png" alt="icon" width="84" height="84"/> -->
+<!-- # ![App icon: ](./icon.png) Tag Vault -->
+<img src="./icon.png" alt="icon" width="84" height="84"/> ## A simple file management app with tags
 
-## A simple file management app with tags
+
 
 [![wakatime](https://wakatime.com/badge/user/ee6ea1f8-6dfb-4436-aeb5-8339646633e5/project/4a604a7d-5a64-4fcd-a9bf-e2b84fe10b72.svg)](https://wakatime.com/badge/user/ee6ea1f8-6dfb-4436-aeb5-8339646633e5/project/4a604a7d-5a64-4fcd-a9bf-e2b84fe10b72)
 ![Static Badge](https://img.shields.io/badge/Krigga-approved-lightgreen?style=flat-square)
