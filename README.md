@@ -1,5 +1,5 @@
 <!-- # ![App icon: ](./icon.png) Tag Vault -->
-<img src="./icon.png" alt="icon" width="64" height="64"/>
+<img src="./icon.png" alt="icon" width="84" height="84"/>
 
 ## A simple file management app with tags
 
