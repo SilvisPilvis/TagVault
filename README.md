@@ -14,6 +14,7 @@ This apps current amazing features are:
 
 - A Loading bar (much wow)
 - Image loading/caching in the background
+- In-App Fullscreen Image Viewing
 - Automatic image discovery
 - Ability to add multiple tags to single image
 - Ability to blacklist files and folders
