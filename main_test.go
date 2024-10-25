@@ -2,6 +2,7 @@ package main_test
 
 import (
 	"main/pkg/fileutils"
+	"main/pkg/icon"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -37,17 +38,18 @@ func TestMainWindowCreation(t *testing.T) {
 func TestWindowIcon(t *testing.T) {
 	// Load the icon
 	// Below code causes nil pointer dereference maybe
-	icon, err := fyne.LoadResourceFromPath("./icon.png")
+	// icon, err := fyne.LoadResourceFromPath()
+	icon := fyne.NewStaticResource("icon", icon.AppIcon)
 	assert.NotNil(t, icon, "Icon was not loaded")
-	assert.Nil(t, err, "Error while loading icon: ")
+	// assert.Nil(t, err, "Error while loading icon: ")
 	// assert.Nil(t, err, "Error while loading icon: ", err.Error())
 
 	// Set the icon
 	window.SetIcon(icon)
 	testApp.SetIcon(icon)
 
-	// Ja negrib errorus var vnk assert not nil icon
-	assert.NotNil(t, window.Icon(), "Window icon is nil so not set")
+	// Ja negrib errorus var vnk assert nil icon
+	// assert.NotNil(t, window.Icon(), "Window icon is nil so not set")
 
 	// Check if the window icon is set
 	assert.NotNil(t, window.Icon(), "Window icon is nil so not set")

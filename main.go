@@ -569,58 +569,6 @@ func SetDisplayDirNewContent(content *fyne.Container, files []string, currentDir
 }
 
 // UNDER NO CIRCUMSTANCES CHANGE THE ORDER IN displayImage func OR THERE WILL BE ERRORS WHEN FYNE IS LOADING IMAGES
-// func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resource, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App, imageContainer *fyne.Container) {
-// 	// clear sidebar
-// 	sidebar.RemoveAll()
-
-// 	fullImg := canvas.NewImageFromResource(resource)
-// 	// fullImg := canvas.NewImageFromFile(path)
-// 	fullImg.FillMode = canvas.ImageFillContain
-// 	fullImg.SetMinSize(fyne.NewSize(200, 200))
-// 	paddedImg := container.NewPadded(fullImg)
-
-// 	fullLabel := widget.NewLabel(truncateFilename(filepath.Base(path), 20, false))
-// 	fullLabel.Wrapping = fyne.TextWrapWord
-
-// 	dateAdded := widget.NewLabel("Date Added: " + database.GetDate(db, path))
-// 	dateAdded.Wrapping = fyne.TextWrapWord
-
-// 	ext := filepath.Ext(path)
-// 	fileType := widget.NewLabel("Type: " + strings.ToUpper(ext[1:]))
-// 	fileType.Wrapping = fyne.TextWrapWord
-
-// 	imageId := database.GetImageId(db, path)
-// 	tagDisplay := tagwindow.CreateTagDisplay(db, imageId, appLogger, sidebar, w)
-
-// 	addTagButton := widget.NewButton("+", func() {
-// 		tagwindow.ShowTagWindow(a, w, db, imageId, tagDisplay)
-// 	})
-
-// 	createTagButton := widget.NewButton("Create Tag", func() {
-// 		tagwindow.ShowCreateTagWindow(a, w, db, appOptions, false, "", 0)
-// 	})
-
-// 	sidebar.Add(paddedImg)
-// 	sidebar.Add(container.NewGridWithRows(3, dateAdded, fullLabel, fileType))
-// 	sidebar.Add(tagDisplay)
-// 	sidebar.Add(container.NewPadded(container.NewGridWithColumns(2, addTagButton, createTagButton)))
-
-// 	// Show sidebar if hidden else show
-// 	if prevoiusImage == path && sidebarScroll.Visible() {
-// 		sidebar.RemoveAll()
-// 		sidebarScroll.Hide()
-// 		split.SetOffset(1)
-// 	} else {
-// 		split.SetOffset(0.65) // 0.65 was 0.7 by default
-// 		sidebarScroll.Show()
-// 		prevoiusImage = path
-// 	}
-
-// 	imageContainer.Refresh()
-// 	// tagDisplay.Refresh()
-// 	// sidebar.Refresh()
-// }
-
 func updateSidebar(db *sql.DB, w fyne.Window, path string, resource fyne.Resource, sidebar *fyne.Container, sidebarScroll *container.Scroll, split *container.Split, a fyne.App, imageContainer *fyne.Container) {
 	// clear sidebar
 	sidebar.RemoveAll()

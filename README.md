@@ -32,7 +32,6 @@ Coming soon:
 - [x] Encrypt
 - [x] GIFs will GIF (GIFs now GIF)
 - [x] Convert
-- [ ] Sorting (Currently sorts by date added)
 
 Current supported image types:
 
@@ -45,9 +44,12 @@ Current supported image types:
 - [x] WEBP
 - [x] AVIF
 - [x] QOI
-- [x] SVG   Only Viewing
-- [ ] RAW   No
-- [ ] JPEGXL   Someday... Maybe... Possibly...?
+- [x] SVG
+
+## User guide
+Download the app from the releases page.
+Move the app to the desired directory
+If you want to you can create a link to the app to use it from desktop
 
 ## App Demo Images
 
