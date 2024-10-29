@@ -60,3 +60,6 @@ If you want to you can create a link to the app to use it from desktop
 ### App with sidebar open
 
 ![App tag demo: ](./demo-tags.png)
+
+## User Guide
+![User guide](./demo-video.mp4)

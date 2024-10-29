@@ -398,7 +398,6 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 		})
 
 		gifButton.SetOnRightClick(func() {
-			appLogger.Println("Add functionality to open menu to add to archive and compress")
 			utilwindows.ShowRightClickMenu(w, selectedFiles, a)
 		})
 
