@@ -7,7 +7,8 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha256"
-	"errors"
+
+	// "errors"
 	"fmt"
 	"io"
 	"os"
@@ -23,7 +24,7 @@ var ArchivePassword string
 
 func CreateTarBzip2Archive(archivePath string, fileList []string, w fyne.Window) error {
 	if len(fileList) <= 1 {
-		dialog.ShowError(errors.New("no files to archive"), w)
+		// dialog.ShowError(errors.New("no files to archive"), w)
 		return fmt.Errorf("no files to archive")
 	}
 
@@ -78,7 +79,7 @@ func CreateTarBzip2Archive(archivePath string, fileList []string, w fyne.Window)
 
 func CreateTarGzipArchive(archivePath string, fileList []string, w fyne.Window) error {
 	if len(fileList) <= 1 {
-		dialog.ShowError(errors.New("no files to archive"), w)
+		// dialog.ShowError(errors.New("no files to archive"), w)
 		return fmt.Errorf("no files to archive")
 	}
 
@@ -128,7 +129,7 @@ func CreateTarGzipArchive(archivePath string, fileList []string, w fyne.Window) 
 
 func CreateZipArchive(archivePath string, fileList []string, w fyne.Window) error {
 	if len(fileList) <= 1 {
-		dialog.ShowError(errors.New("no files to archive"), w)
+		// dialog.ShowError(errors.New("no files to archive"), w)
 		return fmt.Errorf("no files to archive")
 	}
 
@@ -170,7 +171,7 @@ func CreateZipArchive(archivePath string, fileList []string, w fyne.Window) erro
 
 func CreateEncryptedZipArchive(archivePath string, fileList []string, w fyne.Window) error {
 	if len(fileList) <= 1 {
-		dialog.ShowError(errors.New("no files to archive"), w)
+		// dialog.ShowError(errors.New("no files to archive"), w)
 		return fmt.Errorf("no files to archive")
 	}
 
@@ -212,7 +213,7 @@ func CreateEncryptedZipArchive(archivePath string, fileList []string, w fyne.Win
 
 func CreateEncryptedTarBzip2Archive(archivePath string, fileList []string, w fyne.Window) error {
 	if len(fileList) <= 1 {
-		dialog.ShowError(errors.New("no files to archive"), w)
+		// dialog.ShowError(errors.New("no files to archive"), w)
 		return fmt.Errorf("no files to archive")
 	}
 
@@ -267,7 +268,7 @@ func CreateEncryptedTarBzip2Archive(archivePath string, fileList []string, w fyn
 
 func CreateEncryptedTarGzipArchive(archivePath string, fileList []string, w fyne.Window) error {
 	if len(fileList) <= 1 {
-		dialog.ShowError(errors.New("no files to archive"), w)
+		// dialog.ShowError(errors.New("no files to archive"), w)
 		return fmt.Errorf("no files to archive")
 	}
 

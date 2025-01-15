@@ -54,6 +54,7 @@ var (
 	selectedFiles = map[string]bool{}
 	home, _       = os.UserHomeDir()
 	prevoiusImage = ""
+	orderBy       = ""
 )
 
 func main() {
@@ -169,6 +170,7 @@ func main() {
 		return
 	})
 	filterButton.Icon = loadFilterButton
+	// test := orderBy
 
 	optContainer := container.NewGridWithColumns(2, filterButton, settingsButton)
 	controls := container.NewBorder(nil, nil, nil, optContainer, form)

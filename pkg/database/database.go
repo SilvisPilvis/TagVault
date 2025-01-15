@@ -39,7 +39,7 @@ func Init() *sql.DB {
 func setupTables(db *sql.DB) {
 	tables := []string{
 		"CREATE TABLE IF NOT EXISTS `Tag`(`id` INTEGER PRIMARY KEY NOT NULL, `name` VARCHAR(255) NOT NULL UNIQUE, `color` VARCHAR(7) NOT NULL);",
-		"CREATE TABLE IF NOT EXISTS `File`(`id` INTEGER PRIMARY KEY NOT NULL, `path` VARCHAR(1024) NOT NULL UNIQUE, `md5` VARCHAR(32) NOT NULL UNIQUE, `dateAdded` DATETIME NOT NULL);",
+		"CREATE TABLE IF NOT EXISTS `File`(`id` INTEGER PRIMARY KEY NOT NULL, `path` VARCHAR(1024) NOT NULL UNIQUE, `name` VARCHAR(256) NOT NULL UNIQUE, `md5` VARCHAR(32) NOT NULL UNIQUE, `dateAdded` DATETIME NOT NULL);",
 		"CREATE INDEX IF NOT EXISTS idx_image_path ON File(path);", // Creates index on File.path to make searching by path faster
 		"CREATE TABLE IF NOT EXISTS `FileTag`(`id` INTEGER PRIMARY KEY NOT NULL, `fileId` INTEGER NOT NULL, `tagId` INTEGER NOT NULL);",
 		"CREATE TABLE IF NOT EXISTS `Options`(`id` INTEGER PRIMARY KEY NOT NULL, `DatabasePath` VARCHAR(255) NOT NULL, `ExcludedDirs` VARCHAR(255) NOT NULL, `Timezone` VARCHAR(1024) NOT NULL, `SortDesc` BOOLEAN DEFAULT true, `UseRGB` BOOLEAN DEFAULT false, `ImageNumber` INTEGER NOT NULL DEFAULT 20, `ThumbnailSize` INTEGER NOT NULL DEFAULT 256, `Profiling` BOOLEAN DEFAULT false, `ExifFields` VARCHAR(255), `FirstBoot` BOOLEAN DEFAULT false);",
@@ -224,8 +224,8 @@ func DiscoverImages(db *sql.DB, blacklist map[string]int) (bool, error) {
 	defer cancel()
 	appLogger.Println("Created timeout context")
 	stmt, err := db.PrepareContext(ctx, `
-    INSERT INTO File (path, dateAdded, md5) 
-    SELECT ?, DATETIME('now'), ? 
+    INSERT INTO File (path, name, dateAdded, md5) 
+    SELECT ?, ?, DATETIME('now'), ? 
     WHERE NOT EXISTS (SELECT 1 FROM File WHERE path = ?)
 	`)
 	if err != nil {
@@ -266,7 +266,7 @@ func DiscoverImages(db *sql.DB, blacklist map[string]int) (bool, error) {
 				}
 
 				// inserts image path into database
-				insertId, err := stmt.Exec(path, imageHash, path)
+				insertId, err := stmt.Exec(path, strings.Split(filepath.Base(path), ".")[0], imageHash, path)
 				if err != nil {
 					return fmt.Errorf("failed to insert image into database: %w", err)
 				}
