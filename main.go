@@ -165,9 +165,14 @@ func main() {
 		utilwindows.ShowSettingsWindow(a, w, db, appOptions)
 	})
 
+	filterOptions := []string{"Name", "Date Added"}
 	loadFilterButton := fyne.NewStaticResource("filterIcon", icon.FilterIconLight)
 	filterButton := widget.NewButton("", func() {
-		return
+		// return
+		utilwindows.ShowSelectWindow(a, filterOptions, "Filter Options", func(selected string) {
+			// return
+			orderBy = selected
+		})
 	})
 	filterButton.Icon = loadFilterButton
 	// test := orderBy

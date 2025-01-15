@@ -102,7 +102,7 @@ func GetImageCount(db *sql.DB) int {
 }
 
 func GetImagesFromDatabase(db *sql.DB, page int, imageCount uint) ([]string, error) {
-	images, err := db.Query("SELECT path FROM File ORDER BY dateAdded DESC LIMIT ?,?", page, imageCount)
+	images, err := db.Query("SELECT path FROM File ORDER BY name DESC LIMIT ?,?", page, imageCount)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func GetDate(db *sql.DB, path string) string {
 }
 
 func GetImagePathsByTag(db *sql.DB, tagName string) ([]string, error) {
-	query := `SELECT DISTINCT File.path FROM File JOIN FileTag ON File.id = FileTag.fileId JOIN Tag ON FileTag.tagId = Tag.id WHERE Tag.name LIKE ?`
+	query := `SELECT DISTINCT File.path FROM File JOIN FileTag ON File.id = FileTag.fileId JOIN Tag ON FileTag.tagId = Tag.id WHERE Tag.name LIKE ? OR File.name LIKE ?;`
 
 	if tagName == "" || tagName == "%%" {
 		return GetImagesFromDatabase(db, 0, 20)
@@ -153,7 +153,7 @@ func GetImagePathsByTag(db *sql.DB, tagName string) ([]string, error) {
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query(tagName)
+	rows, err := stmt.Query(tagName, tagName)
 	if err != nil {
 		return nil, err
 	}

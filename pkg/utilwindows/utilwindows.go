@@ -461,6 +461,40 @@ func showPasswordWindow(a fyne.App, fmtDate string, fileList []string, tagVaultW
 	passwordWindow.Show()
 }
 
+func ShowSelectWindow(a fyne.App, options []string, title string, onSelected func(selected string)) {
+	// Create a new window
+	selectWindow := a.NewWindow(title)
+
+	// Create a label
+	label := widget.NewLabel("Select what to sort by: ")
+
+	// Create the select widget
+	selectWidget := widget.NewSelect(options, func(selected string) {
+		if selected != "" {
+			// Call the callback function with the selected value
+			onSelected(selected)
+			selectWindow.Close()
+		}
+	})
+
+	// Create a container with vertical layout
+	content := container.NewVBox(
+		label,
+		selectWidget,
+	)
+
+	// Add some padding around the content
+	paddedContent := container.NewPadded(content)
+
+	// Set window content and properties
+	selectWindow.SetContent(paddedContent)
+	selectWindow.Resize(fyne.NewSize(300, 120))
+	selectWindow.CenterOnScreen()
+
+	// Show the window
+	selectWindow.Show()
+}
+
 func showChooseArchiveType(w fyne.Window, formattedDate string, fileList []string) {
 	home, _ := os.UserHomeDir()
 	gzipButton := widget.NewButton("Gzip Archive", func() {
