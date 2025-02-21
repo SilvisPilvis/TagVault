@@ -2,22 +2,22 @@ package imageconv
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
-
 	"image"
 	"image/gif"
 	"image/jpeg"
 	"image/png"
+	"os"
+	"path/filepath"
+	"strings"
 
 	chaiWebp "github.com/chai2010/webp"
 
 	// svgo "github.com/ajstarks/svgo"
 	"github.com/gen2brain/avif"
 	"github.com/gen2brain/svg"
-	"github.com/jdeng/goheif"
-	strukHeif "github.com/strukturag/libheif/go/heif"
+
+	// "github.com/jdeng/goheif"
+	// strukHeif "github.com/strukturag/libheif/go/heif"
 	"github.com/xfmoulet/qoi"
 	"golang.org/x/image/bmp"
 	"golang.org/x/image/tiff"
@@ -104,11 +104,11 @@ func ConvertImage(selectedFiles []string, selectedFormat string, selectedDir str
 			if err != nil {
 				return false, err
 			}
-		case ".heif", ".heic":
-			img, err = goheif.Decode(file)
-			if err != nil {
-				return false, err
-			}
+		// case ".heif", ".heic":
+		// 	img, err = goheif.Decode(file)
+		// 	if err != nil {
+		// 		return false, err
+		// 	}
 		case ".qoi":
 			img, err = qoi.Decode(file)
 			if err != nil {
@@ -205,14 +205,14 @@ func ConvertImage(selectedFiles []string, selectedFormat string, selectedDir str
 				return false, err
 			}
 			fmt.Println("File Converted: ", res.Name())
-		case "HEIC":
-			// heif_ctx, _ := strukHeif.NewContext()
-			_, err = strukHeif.EncodeFromImage(img, strukHeif.Compression(strukHeif.CompressionHEVC), 85, strukHeif.LosslessModeEnabled, strukHeif.LoggingLevelBasic)
-			if err != nil {
-				return false, err
-			}
-			fmt.Println("File Converted: ", res.Name())
-			// strukHeif.NewImage()
+		// case "HEIC":
+		// 	// heif_ctx, _ := strukHeif.NewContext()
+		// 	_, err = strukHeif.EncodeFromImage(img, strukHeif.Compression(strukHeif.CompressionHEVC), 85, strukHeif.LosslessModeEnabled, strukHeif.LoggingLevelBasic)
+		// 	if err != nil {
+		// 		return false, err
+		// 	}
+		// 	fmt.Println("File Converted: ", res.Name())
+		// strukHeif.NewImage()
 		case "QOI":
 			err = qoi.Encode(res, img)
 			if err != nil {

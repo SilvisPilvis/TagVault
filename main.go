@@ -26,7 +26,8 @@ import (
 
 	"github.com/gen2brain/avif"
 	"github.com/gen2brain/svg"
-	"github.com/jdeng/goheif"
+
+	// "github.com/jdeng/goheif"
 	"github.com/xfmoulet/qoi"
 	"golang.org/x/image/bmp"
 	"golang.org/x/image/draw"
@@ -702,8 +703,8 @@ func loadImageResourceEfficient(path string) (fyne.Resource, error) {
 		img, err = png.Decode(file)
 	case ".webp":
 		img, err = webp.Decode(file)
-	case ".heic":
-		img, err = goheif.Decode(file)
+	// case ".heic":
+	// 	img, err = goheif.Decode(file)
 	case ".avif":
 		img, err = avif.Decode(file)
 	case ".qoi":
@@ -803,8 +804,8 @@ func loadImageResourceThumbnailEfficient(path string) (fyne.Resource, error) {
 		img, err = bmp.Decode(file)
 	case ".webp":
 		img, err = webp.Decode(file)
-	case ".heic":
-		img, err = goheif.Decode(file)
+	// case ".heic":
+	// 	img, err = goheif.Decode(file)
 	case ".avif":
 		img, err = avif.Decode(file)
 	case ".qoi":
