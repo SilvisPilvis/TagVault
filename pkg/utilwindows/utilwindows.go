@@ -517,3 +517,53 @@ func showChooseArchiveType(w fyne.Window, formattedDate string, fileList []strin
 	)
 	dialog.ShowCustom("Choose Archive Type", "Close", content, w)
 }
+
+func Copy(src string, dst string) error {
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return fmt.Errorf("Failed to read source file: %s", err.Error())
+	}
+
+	err = os.WriteFile(dst, data, 0644)
+	if err != nil {
+		return fmt.Errorf("Failed to copy file to destination: %s", err.Error())
+	}
+	return nil
+}
+
+func ShowFileRightClickMenu(w fyne.Window, fileList map[string]bool, a fyne.App) {
+	fmt.Println("rmb menu")
+	listedFiles := mapToStringSlice(fileList)
+
+	moveFiles := func(fl []string, dst string) {
+		for _, v := range fl {
+			// os.Rename(v, dst)
+			fmt.Println("Moved files to: ", dst, v)
+		}
+	}
+
+	copyFiles := func(fl []string, dst string) {
+		for _, v := range fl {
+			fmt.Println("Copied files to: ", dst, v)
+			// Copy(v, dst)
+		}
+	}
+
+	moveButton := widget.NewButton("Move",
+		func() {
+			moveFiles(listedFiles, "./")
+		},
+	)
+
+	copyButton := widget.NewButton("Copy",
+		func() {
+			copyFiles(listedFiles, "./")
+		},
+	)
+
+	content := container.NewVBox(
+		moveButton,
+		copyButton,
+	)
+	dialog.ShowCustom("File Actions", "Close", content, w)
+}

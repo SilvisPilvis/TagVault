@@ -1,11 +1,14 @@
 package buttons
 
 import (
+	"image/color"
 	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/driver/desktop"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	fyneGif "fyne.io/x/fyne/widget"
 )
@@ -19,6 +22,95 @@ type imageButton struct {
 	pressedTime  time.Time
 	longTapTimer *time.Timer
 	Selected     bool
+}
+
+type FileButton struct {
+	widget.BaseWidget
+	Icon         fyne.Resource
+	Text         string
+	Selected     bool
+	onTapped     func()
+	onLongTap    func()
+	pressedTime  time.Time
+	longTapTimer *time.Timer
+	onRightClick func()
+}
+
+func NewFileButton(icon *fyne.Resource, text string, tapped func(), rightClick func()) *FileButton {
+	button := &FileButton{
+		Icon:         *icon,
+		Text:         text,
+		Selected:     false,
+		onTapped:     tapped,
+		onRightClick: rightClick,
+		// onLongTap:    longTap,
+	}
+	button.ExtendBaseWidget(button)
+	return button
+}
+
+func (b *FileButton) Tapped(me *desktop.MouseEvent) {
+	if b.onTapped != nil {
+		b.onTapped()
+	}
+}
+
+func (b *FileButton) SetOnTapped(f func()) {
+	b.onTapped = f
+}
+
+func (b *FileButton) SetOnLongTap(f func()) {
+	b.onLongTap = f
+}
+
+func (b *FileButton) LongTap(me *desktop.MouseEvent) {
+	if me.Button == desktop.MouseButtonPrimary {
+		if b.onLongTap != nil {
+			b.onLongTap()
+			b.Selected = !b.Selected
+			// b.Refresh()
+		}
+	}
+}
+
+func (b *FileButton) MouseDown(me *desktop.MouseEvent) {
+	if me.Button == desktop.MouseButtonPrimary {
+		b.pressedTime = time.Now()
+		b.longTapTimer = time.AfterFunc(time.Millisecond*200, func() {
+			if b.onLongTap != nil {
+				b.onLongTap()
+			}
+		})
+	}
+}
+
+func (b *FileButton) MouseUp(_ *desktop.MouseEvent) {
+	if b.longTapTimer != nil {
+		b.longTapTimer.Stop()
+	}
+	if time.Since(b.pressedTime) < time.Millisecond*200 {
+		b.Tapped(nil)
+	}
+}
+
+func (b *FileButton) TappedSecondary(_ *fyne.PointEvent) {
+	if b.onRightClick != nil {
+		b.onRightClick()
+	}
+}
+
+func (b *FileButton) CreateRenderer() fyne.WidgetRenderer {
+	icon := canvas.NewImageFromResource(b.Icon)
+
+	icon.SetMinSize(fyne.NewSize(theme.IconInlineSize(), theme.IconInlineSize()))
+
+	text := canvas.NewText(b.Text, color.NRGBA{R: 0x9e, G: 0xbd, B: 0xff, A: 0xff})
+
+	text.Alignment = fyne.TextAlignCenter
+
+	content := container.NewHBox(icon, text)
+
+	return widget.NewSimpleRenderer(content)
 }
 
 func NewImageButton(resource fyne.Resource) *imageButton {

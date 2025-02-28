@@ -195,7 +195,8 @@ func main() {
 	mainTab := container.NewTabItem("Images", mainContainer)
 	// testTab := container.NewTabItem("Test", container.NewVBox()) // let user pick dir and diaplay all files in dir
 	defaultDir, _ := fileutils.GetDirFiles("/home/amaterasu/")
-	homeTab := container.NewTabItem("Home", CreateDisplayDirContentsContainer(defaultDir))
+	// homeTab := container.NewTabItem("Home", CreateDisplayDirContentsContainer(defaultDir))
+	homeTab := container.NewTabItem("Home", CreateDisplayDirContentsContainer(defaultDir, w, a))
 
 	tabs := container.NewDocTabs(
 		mainTab,
@@ -497,27 +498,74 @@ func displayImage(db *sql.DB, w fyne.Window, path string, imageContainer *fyne.C
 	// appLogger.Println("Showing ", len(imageContainer.Objects), " images")
 }
 
-func CreateDisplayDirContentsContainer(dirFiles []string) *fyne.Container {
+func CreateDisplayDirContentsContainer(dirFiles []string, w fyne.Window, a fyne.App) *fyne.Container {
 	fileContainer := container.NewAdaptiveGrid(4) // default value 4
 	fileContainer.RemoveAll()
 
 	scrollContainer := container.NewVScroll(fileContainer)
 
+	fileIcon := theme.FileIcon()
+	folderIcon := theme.FolderIcon()
+
 	for _, v := range dirFiles {
 		// check if current item is a directory
 		if string(v[len(v)-1]) == "/" {
 			test, _ := fileutils.GetDirFiles(home + "/" + v)
-			icon := widget.NewButtonWithIcon(truncateDirname(v, 10), theme.FolderIcon(), func() {
-				SetDisplayDirNewContent(fileContainer, test, home+"/"+v)
-			})
-			icon.Alignment = widget.ButtonAlignCenter
-			icon.IconPlacement = widget.ButtonIconLeadingText
+
+			icon := buttons.NewFileButton(&folderIcon, truncateDirname(v, 10),
+				func() {
+					SetDisplayDirNewContent(fileContainer, test, home+"/"+v)
+				},
+				func() {
+					utilwindows.ShowFileRightClickMenu(w, selectedFiles, a)
+				},
+			)
+			icon.SetOnLongTap(func() {
+				if len(selectedFiles) >= 0 && !selectedFiles[v] {
+					selectedFiles[v] = true
+					appLogger.Println("Added new file: ", v)
+					icon.Selected = true
+					// If File is already selected and selectedFiles is 0 or bigger than 0
+				} else if len(selectedFiles) >= 0 && selectedFiles[v] {
+					appLogger.Println("Removed file: ", v)
+					delete(selectedFiles, v)
+					icon.Selected = false
+				}
+			},
+			)
+
+			// icon := widget.NewButtonWithIcon(truncateDirname(v, 10), theme.FolderIcon(), func() {
+			// 	SetDisplayDirNewContent(fileContainer, test, home+"/"+v)
+			// })
+			// icon.Alignment = widget.ButtonAlignCenter
+			// icon.IconPlacement = widget.ButtonIconLeadingText
+
 			fileContainer.Add(icon)
 		} else {
 			// this will run if current item is not a dir
-			icon := widget.NewButtonWithIcon(truncateFilename(v, 10, true), theme.FileIcon(), nil)
-			icon.Alignment = widget.ButtonAlignCenter
-			icon.IconPlacement = widget.ButtonIconLeadingText
+			// icon := widget.NewButtonWithIcon(truncateFilename(v, 10, true), theme.FileIcon(), nil)
+			icon := buttons.NewFileButton(&fileIcon, truncateDirname(v, 10),
+				nil,
+				func() {
+					utilwindows.ShowFileRightClickMenu(w, selectedFiles, a)
+				},
+			)
+			icon.SetOnLongTap(func() {
+				if len(selectedFiles) >= 0 && !selectedFiles[v] {
+					selectedFiles[v] = true
+					appLogger.Println("Added new file: ", v)
+					icon.Selected = true
+					// If File is already selected and selectedFiles is 0 or bigger than 0
+				} else if len(selectedFiles) >= 0 && selectedFiles[v] {
+					appLogger.Println("Removed file: ", v)
+					delete(selectedFiles, v)
+					icon.Selected = false
+				}
+			},
+			)
+
+			// icon.Alignment = widget.ButtonAlignCenter
+			// icon.IconPlacement = widget.ButtonIconLeadingText
 			fileContainer.Add(icon)
 		}
 	}
