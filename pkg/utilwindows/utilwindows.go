@@ -535,29 +535,51 @@ func ShowFileRightClickMenu(w fyne.Window, fileList map[string]bool, a fyne.App)
 	fmt.Println("rmb menu")
 	listedFiles := mapToStringSlice(fileList)
 
-	moveFiles := func(fl []string, dst string) {
+	moveFiles := func(fl []string) {
+		var dst string
 		for _, v := range fl {
+			// Open a dialog to select the destination folder
+			dialog.ShowFolderOpen(func(uri fyne.ListableURI, err error) {
+				if err == nil {
+					dst = uri.Path()
+					if uri.Scheme() == "file" {
+						// dst = filepath.Clean(dst)
+						// Show info box that the dst should be a dir
+					}
+				}
+				dst = filepath.Join(dst, filepath.Base(v))
+				fmt.Printf("Moved %v to: %v \n", v, dst)
+			}, w)
 			// os.Rename(v, dst)
-			fmt.Println("Moved files to: ", dst, v)
 		}
 	}
 
-	copyFiles := func(fl []string, dst string) {
+	copyFiles := func(fl []string) {
+		var dst string
 		for _, v := range fl {
-			fmt.Println("Copied files to: ", dst, v)
+			dialog.ShowFolderOpen(func(uri fyne.ListableURI, err error) {
+				if err == nil {
+					dst = uri.Path()
+					if uri.Scheme() == "file" {
+						// convertedPath := filepath.Clean(dst)
+					}
+				}
+				dst = filepath.Join(dst, filepath.Base(v))
+				fmt.Printf("Copied %v to: %v \n", v, dst)
+			}, w)
 			// Copy(v, dst)
 		}
 	}
 
 	moveButton := widget.NewButton("Move",
 		func() {
-			moveFiles(listedFiles, "./")
+			moveFiles(listedFiles)
 		},
 	)
 
 	copyButton := widget.NewButton("Copy",
 		func() {
-			copyFiles(listedFiles, "./")
+			copyFiles(listedFiles)
 		},
 	)
 
