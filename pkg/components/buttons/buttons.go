@@ -34,18 +34,17 @@ type FileButton struct {
 	pressedTime  time.Time
 	longTapTimer *time.Timer
 	onRightClick func()
+	BgImage      *canvas.Rectangle
+	// backgroundColor color.Color
 }
 
-func NewFileButton(icon *fyne.Resource, text string, tapped func(), rightClick func()) *FileButton {
-	button := &FileButton{
-		Icon:         *icon,
-		Text:         text,
-		Selected:     false,
-		onTapped:     tapped,
-		onRightClick: rightClick,
-		// onLongTap:    longTap,
-	}
+func NewFileButton(icon *fyne.Resource, text string) *FileButton {
+	button := &FileButton{}
 	button.ExtendBaseWidget(button)
+	button.Icon = *icon
+	button.Text = text
+	button.BgImage = canvas.NewRectangle(color.NRGBA{R: 0xff, G: 0x00, B: 0x00, A: 0x00})
+	button.BgImage.CornerRadius = 3.5
 	return button
 }
 
@@ -59,16 +58,32 @@ func (b *FileButton) SetOnTapped(f func()) {
 	b.onTapped = f
 }
 
+func (b *FileButton) SetOnRightClick(f func()) {
+	b.onRightClick = f
+}
+
 func (b *FileButton) SetOnLongTap(f func()) {
 	b.onLongTap = f
+}
+
+func (b *FileButton) SetSelected(selected bool) {
+	if selected {
+		b.Selected = true
+		b.BgImage.FillColor = color.NRGBA{R: 0x78, G: 0x78, B: 0x78, A: 0x66}
+		b.BgImage.Refresh()
+		b.Refresh()
+	} else {
+		b.Selected = false
+		b.BgImage.FillColor = color.NRGBA{R: 0x33, G: 0x33, B: 0x33, A: 0x66}
+		b.BgImage.Refresh()
+		b.Refresh()
+	}
 }
 
 func (b *FileButton) LongTap(me *desktop.MouseEvent) {
 	if me.Button == desktop.MouseButtonPrimary {
 		if b.onLongTap != nil {
 			b.onLongTap()
-			b.Selected = !b.Selected
-			// b.Refresh()
 		}
 	}
 }
@@ -99,18 +114,31 @@ func (b *FileButton) TappedSecondary(_ *fyne.PointEvent) {
 	}
 }
 
+func (b *FileButton) Refresh() {
+	b.BaseWidget.Refresh()
+	b.BgImage.Refresh()
+}
+
 func (b *FileButton) CreateRenderer() fyne.WidgetRenderer {
 	icon := canvas.NewImageFromResource(b.Icon)
-
 	icon.SetMinSize(fyne.NewSize(theme.IconInlineSize(), theme.IconInlineSize()))
 
-	text := canvas.NewText(b.Text, color.NRGBA{R: 0x9e, G: 0xbd, B: 0xff, A: 0xff})
+	var text *canvas.Text
+
+	if b.Selected {
+		text = canvas.NewText(b.Text, color.NRGBA{R: 0x9e, G: 0xbd, B: 0xff, A: 0xff})
+		b.BgImage.FillColor = color.NRGBA{R: 0x33, G: 0x33, B: 0x33, A: 0x66} // subtle background
+	} else {
+		text = canvas.NewText(b.Text, color.NRGBA{R: 0x9e, G: 0xbd, B: 0xff, A: 0xff})
+		b.BgImage.FillColor = color.NRGBA{R: 0x33, G: 0x33, B: 0x33, A: 0x66} // subtle background
+	}
 
 	text.Alignment = fyne.TextAlignCenter
 
-	content := container.NewHBox(icon, text)
+	content := container.NewStack(b.BgImage, container.NewHBox(icon, text))
 
 	return widget.NewSimpleRenderer(content)
+	// return widget.NewSimpleRenderer(b.BgImage)
 }
 
 func NewImageButton(resource fyne.Resource) *imageButton {
@@ -130,6 +158,7 @@ func (b *imageButton) Tapped(me *desktop.MouseEvent) {
 
 func (b *imageButton) TappedSecondary(_ *fyne.PointEvent) {
 	if b.onRightClick != nil {
+		println("Right click")
 		b.onRightClick()
 	}
 }

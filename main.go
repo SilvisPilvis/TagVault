@@ -512,27 +512,37 @@ func CreateDisplayDirContentsContainer(dirFiles []string, w fyne.Window, a fyne.
 		if string(v[len(v)-1]) == "/" {
 			test, _ := fileutils.GetDirFiles(home + "/" + v)
 
-			icon := buttons.NewFileButton(&folderIcon, truncateDirname(v, 10),
-				func() {
-					SetDisplayDirNewContent(fileContainer, test, home+"/"+v)
-				},
-				func() {
-					utilwindows.ShowFileRightClickMenu(w, selectedFiles, a)
-				},
-			)
-			icon.SetOnLongTap(func() {
-				if len(selectedFiles) >= 0 && !selectedFiles[v] {
-					selectedFiles[v] = true
-					appLogger.Println("Added new file: ", v)
-					icon.Selected = true
-					// If File is already selected and selectedFiles is 0 or bigger than 0
-				} else if len(selectedFiles) >= 0 && selectedFiles[v] {
-					appLogger.Println("Removed file: ", v)
-					delete(selectedFiles, v)
-					icon.Selected = false
-				}
-			},
-			)
+			icon := buttons.NewFileButton(&folderIcon, truncateDirname(v, 10))
+
+			icon.SetOnTapped(func() {
+				SetDisplayDirNewContent(fileContainer, test, home+"/"+v)
+			})
+
+			icon.SetOnRightClick(func() {
+				utilwindows.ShowFileRightClickMenu(w, selectedFiles, a)
+			})
+
+			// icon.SetOnLongTap(func() {
+			// 	if len(selectedFiles) >= 0 && !selectedFiles[v] {
+			// 		selectedFiles[v] = true
+			// 		appLogger.Println("Added new file: ", v)
+			// 		icon.SetSelected(true)
+			// 		icon.Selected = true
+			// 		icon.BgImage = canvas.NewRectangle(color.NRGBA{R: 0xff, G: 0x00, B: 0x00, A: 0x66}) // red
+			// 		icon.BgImage.FillColor = color.NRGBA{R: 0xff, G: 0x00, B: 0x00, A: 0x66}            // red background
+			// 		icon.Refresh()
+			// 		// If File is already selected and selectedFiles is 0 or bigger than 0
+			// 	} else if len(selectedFiles) >= 0 && selectedFiles[v] {
+			// 		appLogger.Println("Removed file: ", v)
+			// 		delete(selectedFiles, v)
+			// 		icon.SetSelected(false)
+			// 		icon.Selected = false
+			// 		icon.BgImage = canvas.NewRectangle(color.NRGBA{R: 0x00, G: 0x00, B: 0xff, A: 0x66})
+			// 		icon.BgImage.FillColor = color.NRGBA{R: 0x00, G: 0x00, B: 0xff, A: 0x66}
+			// 		icon.Refresh()
+			// 	}
+			// },
+			// )
 
 			// icon := widget.NewButtonWithIcon(truncateDirname(v, 10), theme.FolderIcon(), func() {
 			// 	SetDisplayDirNewContent(fileContainer, test, home+"/"+v)
@@ -543,23 +553,44 @@ func CreateDisplayDirContentsContainer(dirFiles []string, w fyne.Window, a fyne.
 			fileContainer.Add(icon)
 		} else {
 			// this will run if current item is not a dir
-			// icon := widget.NewButtonWithIcon(truncateFilename(v, 10, true), theme.FileIcon(), nil)
-			icon := buttons.NewFileButton(&fileIcon, truncateDirname(v, 10),
-				nil,
-				func() {
-					utilwindows.ShowFileRightClickMenu(w, selectedFiles, a)
-				},
-			)
+			icon := buttons.NewFileButton(&fileIcon, truncateDirname(v, 10))
+
+			icon.SetOnRightClick(func() {
+				utilwindows.ShowFileRightClickMenu(w, selectedFiles, a)
+			})
+
+			// icon.SetOnLongTap(func() {
+			// 	if len(selectedFiles) >= 0 && !selectedFiles[v] {
+			// 		selectedFiles[v] = true
+			// 		appLogger.Println("Added new file: ", v)
+			// 		icon.Selected = true
+			// 		icon.BgImage = canvas.NewRectangle(color.NRGBA{R: 0xff, G: 0x00, B: 0x00, A: 0x66}) // red
+			// 		icon.BgImage.FillColor = color.NRGBA{R: 0xff, G: 0x00, B: 0x00, A: 0x66}            // red background
+			// 		icon.Refresh()
+			// 		// If File is already selected and selectedFiles is 0 or bigger than 0
+			// 	} else if len(selectedFiles) >= 0 && selectedFiles[v] {
+			// 		appLogger.Println("Removed file: ", v)
+			// 		delete(selectedFiles, v)
+			// 		icon.Selected = false
+			// 		icon.BgImage = canvas.NewRectangle(color.NRGBA{R: 0x00, G: 0x00, B: 0xff, A: 0x66})
+			// 		icon.BgImage.FillColor = color.NRGBA{R: 0x00, G: 0x00, B: 0xff, A: 0x66}
+			// 		icon.Refresh()
+			// 	}
+			// },
+			// )
+
 			icon.SetOnLongTap(func() {
 				if len(selectedFiles) >= 0 && !selectedFiles[v] {
 					selectedFiles[v] = true
 					appLogger.Println("Added new file: ", v)
-					icon.Selected = true
+					icon.SetSelected(true)
+					icon.Refresh()
 					// If File is already selected and selectedFiles is 0 or bigger than 0
 				} else if len(selectedFiles) >= 0 && selectedFiles[v] {
 					appLogger.Println("Removed file: ", v)
 					delete(selectedFiles, v)
-					icon.Selected = false
+					icon.SetSelected(false)
+					icon.Refresh()
 				}
 			},
 			)
