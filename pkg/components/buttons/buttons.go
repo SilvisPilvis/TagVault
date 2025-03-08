@@ -122,6 +122,8 @@ func (b *FileButton) Refresh() {
 func (b *FileButton) CreateRenderer() fyne.WidgetRenderer {
 	icon := canvas.NewImageFromResource(b.Icon)
 	icon.SetMinSize(fyne.NewSize(theme.IconInlineSize(), theme.IconInlineSize()))
+	icon.Resize(fyne.NewSize(theme.IconInlineSize(), theme.IconInlineSize())) // Set fixed Resize
+	icon.FillMode = canvas.ImageFillContain
 
 	var text *canvas.Text
 

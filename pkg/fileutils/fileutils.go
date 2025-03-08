@@ -10,28 +10,26 @@ import (
 	"strings"
 )
 
-var (
-	// imageTypes = map[string]struct{}{
-	// 	".jpg": {}, ".png": {}, ".jpeg": {}, ".gif": {}, ".bmp": {}, ".ico": {},
-	// }
-	imageMap = map[string]bool{
-		".png":  true,
-		".jpg":  true,
-		".jpeg": true,
-		".bmp":  true,
-		".gif":  true,
-		".tiff": true,
-		".webp": true,
-		".svg":  false,
-		".ico":  false,
-		".raw":  true,
-		".heic": true,
-		".avif": true,
-		".avi":  true,
-		".qoi":  true,
-		".dng":  true,
-	}
-)
+//	imageTypes = map[string]struct{}{
+//		".jpg": {}, ".png": {}, ".jpeg": {}, ".gif": {}, ".bmp": {}, ".ico": {},
+//	}
+var imageMap = map[string]bool{
+	".png":  true,
+	".jpg":  true,
+	".jpeg": true,
+	".bmp":  true,
+	".gif":  true,
+	".tiff": true,
+	".webp": true,
+	".svg":  false,
+	".ico":  false,
+	".raw":  true,
+	".heic": true,
+	".avif": true,
+	".avi":  true,
+	".qoi":  true,
+	".dng":  true,
+}
 
 func IsFile(path string) (bool, error) {
 	fileInfo, err := os.Stat(path)
@@ -99,6 +97,35 @@ func GetDirFiles(path string) ([]string, error) {
 			// continue
 		} else {
 			files = append(files, v.Name())
+		}
+		// if filepath.Ext(v.Name()) != ".md" {
+		// 	continue
+		// }
+	}
+
+	return files, nil
+}
+
+func GetAbsDirFiles(path string) ([]string, error) {
+	dirFiles, err := os.ReadDir(path)
+	if err != nil {
+		return nil, fmt.Errorf("error reading directory: %v", err)
+	}
+
+	// Convert to absolute path if it's not already
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, fmt.Errorf("error getting absolute path: %v", err)
+	}
+
+	var files []string
+	for _, v := range dirFiles {
+		if v.IsDir() {
+			// if file is a directory append /
+			files = append(files, filepath.Join(absPath, v.Name())+"/")
+			// continue
+		} else {
+			files = append(files, filepath.Join(absPath, v.Name()))
 		}
 		// if filepath.Ext(v.Name()) != ".md" {
 		// 	continue

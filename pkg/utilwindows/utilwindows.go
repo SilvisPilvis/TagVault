@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"image/color"
+	"io"
 	"log"
 	"main/pkg/apptheme"
 	"main/pkg/archives"
@@ -518,16 +519,49 @@ func showChooseArchiveType(w fyne.Window, formattedDate string, fileList []strin
 	dialog.ShowCustom("Choose Archive Type", "Close", content, w)
 }
 
+// func Copy(src string, dst string) error {
+// 	data, err := os.ReadFile(src)
+// 	if err != nil {
+// 		return fmt.Errorf("Failed to read source file: %s", err.Error())
+// 	}
+//
+// 	err = os.WriteFile(dst, data, 0666)
+// 	if err != nil {
+// 		return fmt.Errorf("Failed to write to destination: %s", err.Error())
+// 	}
+// 	return nil
+// }
+
 func Copy(src string, dst string) error {
-	data, err := os.ReadFile(src)
-	if err != nil {
-		return fmt.Errorf("Failed to read source file: %s", err.Error())
+	if len(dst) == 0 {
+		return fmt.Errorf("destination is empty")
 	}
 
-	err = os.WriteFile(dst, data, 0644)
+	// Open the source file
+	srcFile, err := os.Open(src)
 	if err != nil {
-		return fmt.Errorf("Failed to copy file to destination: %s", err.Error())
+		return fmt.Errorf("failed to open source file: %s", err.Error())
 	}
+	defer srcFile.Close()
+
+	// Ensure the destination directory exists
+	dstDir := filepath.Dir(dst)
+	if err := os.MkdirAll(dstDir, os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create destination directory: %s", err.Error())
+	}
+
+	// Create the destination file
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		return fmt.Errorf("failed to create destination file: %s", err.Error())
+	}
+	defer dstFile.Close()
+
+	// Copy the contents
+	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		return fmt.Errorf("failed to copy file contents: %s", err.Error())
+	}
+
 	return nil
 }
 
@@ -548,9 +582,13 @@ func ShowFileRightClickMenu(w fyne.Window, fileList map[string]bool, a fyne.App)
 					}
 				}
 				dst = filepath.Join(dst, filepath.Base(v))
-				fmt.Printf("Moved %v to: %v \n", v, dst)
+				// fmt.Printf("Moved %v to: %v \n", v, dst)
+
+				err = os.Rename(v, dst)
+				if err != nil {
+					log.Println(err)
+				}
 			}, w)
-			// os.Rename(v, dst)
 		}
 	}
 
@@ -564,10 +602,21 @@ func ShowFileRightClickMenu(w fyne.Window, fileList map[string]bool, a fyne.App)
 						// convertedPath := filepath.Clean(dst)
 					}
 				}
+				v, err = filepath.Abs(v)
+				if err != nil {
+					log.Println(err)
+					return
+				}
+
 				dst = filepath.Join(dst, filepath.Base(v))
-				fmt.Printf("Copied %v to: %v \n", v, dst)
+				// fmt.Printf("Copied %v to: %v \n", v, dst)
+
+				// println("Dst before copy: ", dst)
+				err = Copy(v, dst)
+				if err != nil {
+					log.Println(err)
+				}
 			}, w)
-			// Copy(v, dst)
 		}
 	}
 

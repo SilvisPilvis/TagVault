@@ -194,9 +194,11 @@ func main() {
 
 	mainTab := container.NewTabItem("Images", mainContainer)
 	// testTab := container.NewTabItem("Test", container.NewVBox()) // let user pick dir and diaplay all files in dir
-	defaultDir, _ := fileutils.GetDirFiles("/home/amaterasu/")
+	// defaultDir, _ := fileutils.GetDirFiles(home)
+
+	flie_view_dir, _ := fileutils.GetAbsDirFiles(home)
 	// homeTab := container.NewTabItem("Home", CreateDisplayDirContentsContainer(defaultDir))
-	homeTab := container.NewTabItem("Home", CreateDisplayDirContentsContainer(defaultDir, w, a))
+	homeTab := container.NewTabItem("Home", CreateDisplayDirContentsContainer(flie_view_dir, w, a))
 
 	tabs := container.NewDocTabs(
 		mainTab,
@@ -512,10 +514,13 @@ func CreateDisplayDirContentsContainer(dirFiles []string, w fyne.Window, a fyne.
 		if string(v[len(v)-1]) == "/" {
 			test, _ := fileutils.GetDirFiles(home + "/" + v)
 
-			icon := buttons.NewFileButton(&folderIcon, truncateDirname(v, 10))
+			icon := buttons.NewFileButton(&folderIcon, truncateDirname(filepath.Base(v), 10))
 
 			icon.SetOnTapped(func() {
-				SetDisplayDirNewContent(fileContainer, test, home+"/"+v)
+				// SetDisplayDirNewContent(fileContainer, test, home+"/"+v)
+				SetDisplayDirNewContent(fileContainer, test, v)
+				w.Canvas().Refresh(fileContainer)
+				w.Content().Refresh()
 			})
 
 			icon.SetOnRightClick(func() {
@@ -544,40 +549,17 @@ func CreateDisplayDirContentsContainer(dirFiles []string, w fyne.Window, a fyne.
 			// },
 			// )
 
-			// icon := widget.NewButtonWithIcon(truncateDirname(v, 10), theme.FolderIcon(), func() {
-			// 	SetDisplayDirNewContent(fileContainer, test, home+"/"+v)
-			// })
-			// icon.Alignment = widget.ButtonAlignCenter
-			// icon.IconPlacement = widget.ButtonIconLeadingText
-
 			fileContainer.Add(icon)
 		} else {
 			// this will run if current item is not a dir
-			icon := buttons.NewFileButton(&fileIcon, truncateDirname(v, 10))
+			icon := buttons.NewFileButton(&fileIcon, truncateDirname(filepath.Base(v), 10))
 
 			icon.SetOnRightClick(func() {
 				utilwindows.ShowFileRightClickMenu(w, selectedFiles, a)
+				selectedFiles = make(map[string]bool)
+				// icon.SetSelected(false)
+				icon.Refresh()
 			})
-
-			// icon.SetOnLongTap(func() {
-			// 	if len(selectedFiles) >= 0 && !selectedFiles[v] {
-			// 		selectedFiles[v] = true
-			// 		appLogger.Println("Added new file: ", v)
-			// 		icon.Selected = true
-			// 		icon.BgImage = canvas.NewRectangle(color.NRGBA{R: 0xff, G: 0x00, B: 0x00, A: 0x66}) // red
-			// 		icon.BgImage.FillColor = color.NRGBA{R: 0xff, G: 0x00, B: 0x00, A: 0x66}            // red background
-			// 		icon.Refresh()
-			// 		// If File is already selected and selectedFiles is 0 or bigger than 0
-			// 	} else if len(selectedFiles) >= 0 && selectedFiles[v] {
-			// 		appLogger.Println("Removed file: ", v)
-			// 		delete(selectedFiles, v)
-			// 		icon.Selected = false
-			// 		icon.BgImage = canvas.NewRectangle(color.NRGBA{R: 0x00, G: 0x00, B: 0xff, A: 0x66})
-			// 		icon.BgImage.FillColor = color.NRGBA{R: 0x00, G: 0x00, B: 0xff, A: 0x66}
-			// 		icon.Refresh()
-			// 	}
-			// },
-			// )
 
 			icon.SetOnLongTap(func() {
 				if len(selectedFiles) >= 0 && !selectedFiles[v] {
@@ -595,8 +577,6 @@ func CreateDisplayDirContentsContainer(dirFiles []string, w fyne.Window, a fyne.
 			},
 			)
 
-			// icon.Alignment = widget.ButtonAlignCenter
-			// icon.IconPlacement = widget.ButtonIconLeadingText
 			fileContainer.Add(icon)
 		}
 	}
@@ -633,23 +613,36 @@ func SetDisplayDirNewContent(content *fyne.Container, files []string, currentDir
 		dirContent = files
 	}
 
+	fileIcon := theme.FileIcon()
+	folderIcon := theme.FolderIcon()
+
 	for _, v := range dirContent {
 		isDir := string(v[len(v)-1]) == "/"
-		var icon *widget.Button
+		var icon *buttons.FileButton
 
 		if isDir {
-			icon = widget.NewButtonWithIcon(truncateDirname(v, 10), theme.FolderIcon(), func() {
+			icon = buttons.NewFileButton(&folderIcon, truncateDirname(filepath.Base(v), 10))
+			icon.SetOnTapped(func() {
 				newDir := filepath.Join(currentDir, v)
 				SetDisplayDirNewContent(content, nil, newDir)
 			})
+
+			// icon = widget.NewButtonWithIcon(truncateDirname(v, 10), theme.FolderIcon(), func() {
+			// 	newDir := filepath.Join(currentDir, v)
+			// 	SetDisplayDirNewContent(content, nil, newDir)
+			// })
 		} else {
-			icon = widget.NewButtonWithIcon(truncateFilename(v, 10, true), theme.FileIcon(), nil)
+			icon = buttons.NewFileButton(&fileIcon, truncateFilename(filepath.Base(v), 10, true))
+
+			// icon = widget.NewButtonWithIcon(truncateFilename(v, 10, true), theme.FileIcon(), nil)
 		}
 
-		icon.Alignment = widget.ButtonAlignCenter
-		icon.IconPlacement = widget.ButtonIconLeadingText
+		// icon.Alignment = widget.ButtonAlignCenter
+		// icon.IconPlacement = widget.ButtonIconLeadingText
 		content.Add(icon)
 	}
+
+	content.Refresh()
 
 	return content
 }
