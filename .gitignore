@@ -6,3 +6,4 @@ spinner.*
 *.db-wal
 *.db-shm
 /pyroscope
+*.mp4
