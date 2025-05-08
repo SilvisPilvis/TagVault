@@ -47,6 +47,7 @@ func (opts Options) InitDefault() *Options {
 			"Android":      1,
 			"android":      1,
 			"node_modules": 1,
+			"AppData":      1,
 			cwd:            1,
 			// filepath.Dir(os.Args[0]): 1,
 		},

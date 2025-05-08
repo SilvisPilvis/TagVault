@@ -78,26 +78,34 @@ func CreateTarBzip2Archive(archivePath string, fileList []string, w fyne.Window)
 }
 
 func CreateTarGzipArchive(archivePath string, fileList []string, w fyne.Window) error {
+	// Check if file list is empty
 	if len(fileList) <= 1 {
 		// dialog.ShowError(errors.New("no files to archive"), w)
+		// if fileList is empty, return an error
 		return fmt.Errorf("no files to archive")
 	}
 
+	// Create the archive file
 	archive, err := os.Create(archivePath)
 	if err != nil {
 		return fmt.Errorf("failed to create archive: %w", err)
 	}
 	defer archive.Close()
 
+	// Create a gzip writer for the archive
 	gzipWriter := gzip.NewWriter(archive)
 	defer gzipWriter.Close() // Ensure gzipWriter is closed to finalize the archive
 
+	// Create a tar writer for the archive
 	tarWriter := tar.NewWriter(gzipWriter)
 	defer tarWriter.Close() // Ensure tarWriter is closed
 
+	// Loop through each file in selected files
 	for _, filePath := range fileList {
+		// Try to add the file to the archive
 		err := addFileToTarArchive(filePath, tarWriter)
 		if err != nil {
+			//  If an error occurs, return it
 			return fmt.Errorf("failed to add file %s to archive: %w", filePath, err)
 		}
 	}
@@ -123,6 +131,7 @@ func CreateTarGzipArchive(archivePath string, fileList []string, w fyne.Window) 
 		return fmt.Errorf("failed to stat archive file: %w", err)
 	}
 
+	// Debug message
 	fmt.Printf("Archive created successfully at %s with size %d bytes\n", archivePath, info.Size())
 	return nil
 }
@@ -317,7 +326,6 @@ func CreateEncryptedTarGzipArchive(archivePath string, fileList []string, w fyne
 }
 
 func addFileToTarArchive(filePath string, tarWriter *tar.Writer) error {
-
 	file, err := os.Open(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to open file %s: %w", filePath, err)
@@ -350,7 +358,6 @@ func addFileToTarArchive(filePath string, tarWriter *tar.Writer) error {
 }
 
 func addFileZipToArchive(filePath string, zipWriter *zip.Writer) error {
-
 	file, err := os.Open(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to open file %s: %w", filePath, err)
@@ -384,7 +391,6 @@ func addFileZipToArchive(filePath string, zipWriter *zip.Writer) error {
 }
 
 func addEncryptedFileZipToArchive(filePath string, zipWriter *zip.Writer) error {
-
 	file, err := os.Open(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to open file %s: %w", filePath, err)

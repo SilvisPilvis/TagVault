@@ -122,14 +122,10 @@ func ConvertImage(selectedFiles []string, selectedFormat string, selectedDir str
 		// encode the image
 		// save bytes to array
 		imageName := filepath.Base(selectedFiles[key])
-		// fmt.Println("Filepath Base: ", imageName)
 		imageName = imageName[:len(imageName)-len(filepath.Ext(imageName))]
-		// fmt.Println("No Extension: ", imageName)
 		imageName += "." + strings.ToLower(selectedFormat)
-		// fmt.Println("New Extension: ", imageName)
 		fmt.Println("Selected Dir Before Create: ", selectedDir)
 		res, err := os.Create(selectedDir + imageName)
-		// res = os.NewFile(res.Fd(), res.Name())
 		if err != nil {
 			fmt.Println("Failed to create converted file: ", err)
 			return false, err
@@ -181,24 +177,6 @@ func ConvertImage(selectedFiles []string, selectedFormat string, selectedDir str
 				return false, err
 			}
 			fmt.Println("File Converted: ", res.Name())
-		// case "SVG":
-		// 	// err = svg.Encode(res, img)
-		// 	w := img.Bounds().Size().X
-		// 	h := img.Bounds().Size().Y
-
-		// 	canvas := svgo.New(res)
-		// 	canvas.Start(w, h)
-		// 	canvas.Rect(0, 0, w, h)
-
-		// 	for y := 0; y < h; y++ {
-		// 		for x := 0; x < w; x++ {
-		// 			r, g, b, a := img.At(x, y).RGBA()
-		// 			canvas.RGBA((x*100)+50, (y*100)+50, r, g, b, a)
-		// 			canvas.Writer
-		// 		}
-		// 	}
-
-		// 	canvas.End()
 		case "AVIF":
 			err = avif.Encode(res, img, avif.Options{Quality: 85, QualityAlpha: 85})
 			if err != nil {

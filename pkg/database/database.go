@@ -17,9 +17,11 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var appLogger = logger.InitLogger()
-var currentTime = time.Now().Format("2006-01-02")
-var userHome, _ = os.UserHomeDir()
+var (
+	appLogger   = logger.InitLogger()
+	currentTime = time.Now().Format("2006-01-02")
+	userHome, _ = os.UserHomeDir()
+)
 
 func Init() *sql.DB {
 	db, err := sql.Open("sqlite3", fmt.Sprintf("file:%s.db?timeout=10000&_busy_timeout=10000", runtime.GOOS))
@@ -74,12 +76,13 @@ func AddImageTypeTags(db *sql.DB) error {
 		return err
 	}
 
-	for i := 0; i < len(imageconv.ImageTypes); i++ {
+	for i := range imageconv.ImageTypes {
 		// Adds image type tags
 		_, err = stmt.Exec(imageconv.ImageTypes[i], "#373c40", imageconv.ImageTypes[i])
 		if err != nil {
 			return err
 		}
+
 	}
 
 	// Adds date added tag
@@ -186,7 +189,6 @@ func SearchImagesByTag(db *sql.DB, tagName string) ([]string, error) {
 	`
 
 	rows, err := db.Query(query, tagName)
-
 	if err != nil {
 		return nil, err
 	}

@@ -13,6 +13,7 @@ import (
 //	imageTypes = map[string]struct{}{
 //		".jpg": {}, ".png": {}, ".jpeg": {}, ".gif": {}, ".bmp": {}, ".ico": {},
 //	}
+
 var imageMap = map[string]bool{
 	".png":  true,
 	".jpg":  true,

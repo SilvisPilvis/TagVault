@@ -519,19 +519,6 @@ func showChooseArchiveType(w fyne.Window, formattedDate string, fileList []strin
 	dialog.ShowCustom("Choose Archive Type", "Close", content, w)
 }
 
-// func Copy(src string, dst string) error {
-// 	data, err := os.ReadFile(src)
-// 	if err != nil {
-// 		return fmt.Errorf("Failed to read source file: %s", err.Error())
-// 	}
-//
-// 	err = os.WriteFile(dst, data, 0666)
-// 	if err != nil {
-// 		return fmt.Errorf("Failed to write to destination: %s", err.Error())
-// 	}
-// 	return nil
-// }
-
 func Copy(src string, dst string) error {
 	if len(dst) == 0 {
 		return fmt.Errorf("destination is empty")
